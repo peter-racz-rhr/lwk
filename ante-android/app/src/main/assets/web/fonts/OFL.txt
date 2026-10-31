@@ -1,0 +1,4 @@
+Big Shoulders Display — Copyright 2019 The Big Shoulders Project Authors (https://github.com/xotypeco/big_shoulders)
+Hanken Grotesk — Copyright 2021 The Hanken Grotesk Project Authors (https://github.com/marcologous/hanken-grotesk)
+
+Both fonts are licensed under the SIL Open Font License, Version 1.1: https://openfontlicense.org
