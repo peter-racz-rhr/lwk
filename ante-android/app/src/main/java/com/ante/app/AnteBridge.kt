@@ -67,6 +67,28 @@ class AnteBridge(
         return true
     }
 
+    /* ---- Over-the-air UI updates ---- */
+
+    /** The page has drawn: this UI version starts fine. */
+    @JavascriptInterface
+    fun ready() = Ota.confirm(ctx)
+
+    /** Versions for the profile screen: the native API level and the UI bundle (0 = built in). */
+    @JavascriptInterface
+    fun versions(): String = JSONObject()
+        .put("app", try { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName } catch (e: Exception) { "" })
+        .put("native", Ota.NATIVE_API)
+        .put("web", Ota.activeVersion(ctx))
+        .toString()
+
+    /** Switches to a newly downloaded UI now. Only Ante's own screen does this; the block screen waits. */
+    @JavascriptInterface
+    fun applyUpdate(): Boolean {
+        if (activity !is MainActivity) return false
+        activity.runOnUiThread { WebHost.load(activity, webView) }
+        return true
+    }
+
     /* ---- Account and onboarding ---- */
 
     /** Installs from before onboarding existed (limits already set) count as onboarded. */

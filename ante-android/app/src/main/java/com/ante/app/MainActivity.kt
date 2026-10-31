@@ -25,6 +25,8 @@ class MainActivity : Activity() {
         super.onResume()
         // Coming back from Settings or from a limited app: show fresh numbers and permission state.
         WebHost.refresh(web)
+        // Look for a newer UI; the page decides when to switch (never in the middle of a round).
+        Ota.checkAsync(this) { v -> web?.evaluateJavascript("window.anteUpdateReady && window.anteUpdateReady($v)", null) }
     }
 
     @Deprecated("Deprecated in Java")

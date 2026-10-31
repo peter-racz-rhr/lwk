@@ -77,9 +77,19 @@
           <a class="btn ghost" href="?reset=1&acc=1">Reset demo data</a>
         </div>
       </section>`}
-      <p class="fine center">Ante 0.2 · No real money · Your limits and history stay on this phone.</p>
+      <p class="fine center">${versionLine()} · No real money · Your limits and history stay on this phone.</p>
     </div>`;
   };
+
+  /** "Ante 0.1.0 · UI update 2026-10-31 14:52", so it's easy to see an update has landed. */
+  function versionLine() {
+    const v = (A.versions && A.versions()) || {};
+    const app = v.app ? `Ante ${esc(v.app)}` : "Ante";
+    if (!v.web) return `${app} · built-in UI`;
+    const d = new Date(Number(v.web) * 1000);
+    const stamp = isNaN(d) ? String(v.web) : `${d.getFullYear()}-${App.pad(d.getMonth() + 1)}-${App.pad(d.getDate())} ${App.pad(d.getHours())}:${App.pad(d.getMinutes())}`;
+    return `${app} · UI update ${esc(stamp)}`;
+  }
 
   App.views.legal = function () {
     const d = App.L.DOCS[ui.doc] || App.L.DOCS.terms;

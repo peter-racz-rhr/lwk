@@ -35,6 +35,10 @@
       openGuarded: pkg => N.openGuarded(pkg),
       openBatterySettings: () => N.openBatterySettings(),
       openDateSettings: () => N.openDateSettings(),
+      // Over-the-air UI updates. Older native builds don't have these, so every call is guarded.
+      ready: () => { try { N.ready(); } catch (e) { /* older bridge */ } },
+      versions: () => { try { return parse(N.versions(), {}); } catch (e) { return {}; } },
+      applyUpdate: () => { try { return N.applyUpdate(); } catch (e) { return false; } },
     };
     return;
   }
@@ -181,6 +185,9 @@
     },
     signOut() { Object.assign(ACCT, { signedIn: false, name: "", email: "" }); saveAcct(); },
     finishOnboarding() { ACCT.onboarded = true; saveAcct(); },
+    ready() {},
+    versions: () => ({ app: "web demo", native: 0, web: 0 }),
+    applyUpdate: () => { location.reload(); return true; },
     openLink(url) { if (/^(https:\/\/ko-fi\.com\/peteracz|mailto:peter\.racz\.rhr@gmail\.com)$/.test(url)) window.open(url, "_blank", "noopener"); return true; },
     // Strict mode. ?wait=1 shortens the 30 s wait to 1 s for tests.
     startWait: () => { waitStart = Date.now(); },

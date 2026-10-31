@@ -8,7 +8,11 @@ Péter Rácz, Kálti Márk u. 2/B, Hungary. Email: peter.racz.rhr@gmail.com, pho
 
 ## What stays on your phone
 
-Your limits, the time left and used per app, your daily history (about six months), your table results, your settings and your theme. This is stored only on your device. Ante has no internet permission and sends none of it anywhere.
+Your limits, the time left and used per app, your daily history (about six months), your table results, your settings and your theme. This is stored only on your device and is never sent anywhere.
+
+## App updates
+
+Ante checks the project's public GitHub page (github.com) for a newer version of its screens, at most every ten minutes while you use it, and downloads it if there is one. These requests carry no personal data, but GitHub, like any website, sees your IP address and keeps standard logs under its own privacy policy (docs.github.com/site-policy/privacy-policies). Each update is signed, and Ante refuses anything that isn't.
 
 ## Which app is in front
 

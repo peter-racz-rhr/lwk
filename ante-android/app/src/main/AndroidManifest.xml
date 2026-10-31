@@ -3,6 +3,8 @@
 
     <!-- Lets Ante ask to be exempt from battery optimization, so OEM battery savers don't kill the watcher. -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <!-- Only for downloading signed UI updates from the project's GitHub releases. -->
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <!-- Package visibility (Android 11+): list launchable apps for the limit picker, and see the home screen. -->
     <queries>

@@ -202,6 +202,7 @@
     if (ui.view === "tables") App.afterTables();
     if (ui.view === "welcome") App.afterWelcome();
     App.paintOverlay();
+    if (App.afterRender) App.afterRender();
   };
 
   /* ---------- shared actions ---------- */
@@ -289,8 +290,29 @@
     if (ui.view === "game") App.renderControls(); else App.render();
   };
 
+  /* ---------- over-the-air updates ----------
+     The native side downloads and verifies a new UI in the background, then calls this. Switch
+     straight away when nothing is in progress; otherwise wait for a calm moment. */
+  const UPDATED_KEY = "ante-just-updated";
+  let updatePending = false;
+  const calm = () => !App.BLOCK && !ui.busy && !ui.round && !ui.sheet && !ui.pending && ui.view !== "game" && ui.view !== "welcome";
+  function tryApplyUpdate() {
+    if (!updatePending || !calm()) return;
+    updatePending = false;
+    try { localStorage.setItem(UPDATED_KEY, "1"); } catch (e) { /* storage off: no toast */ }
+    if (!A.applyUpdate || !A.applyUpdate()) { try { localStorage.removeItem(UPDATED_KEY); } catch (e) { /* ignore */ } }
+  }
+  window.anteUpdateReady = function () { updatePending = true; tryApplyUpdate(); };
+  App.afterRender = tryApplyUpdate;
+
   /* ---------- boot ---------- */
-  const start = () => { App.ensureStakeApp(); App.startBreath(); App.render(); };
+  const start = () => {
+    App.ensureStakeApp(); App.startBreath(); App.render();
+    if (A.ready) A.ready(); // tells the native side this UI version starts fine
+    let fresh = false;
+    try { fresh = localStorage.getItem(UPDATED_KEY) === "1"; localStorage.removeItem(UPDATED_KEY); } catch (e) { /* ignore */ }
+    if (fresh) App.toast("Ante just updated itself.");
+  };
   if (document.fonts && document.fonts.ready) {
     let done = false; const go = () => { if (!done) { done = true; start(); } };
     document.fonts.ready.then(go); setTimeout(go, 400);

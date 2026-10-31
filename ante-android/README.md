@@ -62,6 +62,31 @@ Strict mode and onboarding.
 To check a built copy, run `E2E_URL=http://localhost:8787/index.html node web-tests/e2e.js`
 against any local server.
 
+## Updates without rebuilding (over the air)
+
+The screens, games and animations are the web UI in `assets/web/`. After one build with this
+feature, the installed app updates that part by itself:
+
+1. A push that changes `assets/web/` runs the **Ante UI update** GitHub Action. It zips the UI,
+   signs it with the `ANTE_OTA_KEY` secret and uploads it to the `web-latest` release.
+2. When you open Ante (at most every 10 minutes) it downloads the new bundle, checks the
+   signature (public key in `Ota.kt`) and the checksum, and switches to it when you are not in
+   the middle of a round. A short note says "Ante just updated itself". Profile shows the UI version.
+
+Safety: unsigned or tampered bundles are refused; a bundle that fails to start three times falls
+back to the built-in UI; older bundles are never installed again; a new APK wipes downloaded
+bundles because its own files are newer.
+
+**One-time setup:** GitHub → the repo → Settings → Secrets and variables → Actions → New
+repository secret. Name `ANTE_OTA_KEY`, value: the whole private key file (`ante-ota-private.pem`,
+including the BEGIN/END lines). Then rebuild the app once in Android Studio. Never commit the
+private key. To replace it, run `scripts/ota-keygen.sh`, put the new public key in `Ota.kt`,
+update the secret and rebuild.
+
+**Still needs a new APK:** anything in Kotlin (blocking, permissions, sign-in, the bridge). If a
+change to the bridge would break older apps, bump `NATIVE_API` in `Ota.kt`; older apps then
+keep their current UI until they're rebuilt.
+
 ## First run on the phone
 
 1. Open Ante and tap **Open Accessibility settings**. Find **Ante app limits** and switch it on.

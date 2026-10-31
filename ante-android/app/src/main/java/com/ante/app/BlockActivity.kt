@@ -28,7 +28,8 @@ class BlockActivity : Activity() {
         val before = pkg
         readIntent(intent)
         // Same app again: keep the page (and any hand in progress), just refresh its numbers.
-        if (pkg != before) web?.loadUrl(WebHost.START_URL) else WebHost.refresh(web)
+        val w = web
+        if (pkg != before && w != null) WebHost.load(this, w) else WebHost.refresh(w)
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {

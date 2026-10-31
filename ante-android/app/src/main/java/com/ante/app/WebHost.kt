@@ -16,10 +16,14 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
+import com.ante.app.core.OtaCore
+import java.io.File
 
 /** Builds the WebView that hosts the bundled UI from `assets/web/`. */
 object WebHost {
-    const val START_URL = "file:///android_asset/web/index.html"
+    /** The page lives on a private https origin that never reaches the network: every request is answered below. */
+    private const val HOST = "appassets.androidplatform.net"
+    const val START_URL = "https://$HOST/web/index.html"
     private const val BG = "#0E1A18"
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -46,13 +50,14 @@ object WebHost {
             settings.mediaPlaybackRequiresUserGesture = true
             settings.textZoom = 100
             webViewClient = object : WebViewClient() {
-                // The UI is local only. Refuse every navigation and every request outside the bundled files.
+                // The UI is local only. Refuse every navigation and every request outside the bundle.
                 override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean =
-                    !isBundled(request.url)
+                    !(request.url.scheme == "https" && request.url.host == HOST)
 
-                override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? =
-                    if (isBundled(request.url) || request.url.scheme == "data") null
-                    else WebResourceResponse("text/plain", "utf-8", 403, "Blocked", emptyMap(), null)
+                override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
+                    if (request.url.scheme == "data") return null
+                    return serve(activity, request.url, (view.tag as? Source)?.root)
+                }
             }
         }
         web.addJavascriptInterface(AnteBridge(activity, web, mode, blockedPkg, blockNote), "AnteNative")
@@ -77,9 +82,47 @@ object WebHost {
         }
         activity.setContentView(root)
         immersive(activity)
-        web.loadUrl(START_URL)
+        load(activity, web)
         return web
     }
+
+    /** Which files a page load uses: a downloaded update, or null for the ones in the APK. */
+    private class Source(val root: File?)
+
+    /** (Re)loads the page from the newest installed UI. */
+    fun load(activity: Activity, web: WebView) {
+        web.tag = Source(Ota.rootForLoad(activity))
+        web.loadUrl(START_URL)
+    }
+
+    private fun serve(activity: Activity, uri: Uri, root: File?): WebResourceResponse {
+        if (uri.scheme != "https" || uri.host != HOST) return blocked()
+        val rel = OtaCore.safeRelPath(uri.path ?: "") ?: return blocked()
+        return try {
+            val stream = if (root != null) {
+                val f = File(root, rel)
+                if (!f.isFile) return blocked(404)
+                f.inputStream()
+            } else {
+                activity.assets.open("web/$rel")
+            }
+            val mime = MIME[rel.substringAfterLast('.', "").lowercase()] ?: "application/octet-stream"
+            WebResourceResponse(mime, if (mime.startsWith("text/") || mime.endsWith("javascript")) "utf-8" else null, stream).apply {
+                responseHeaders = mapOf("Cache-Control" to "no-store")
+            }
+        } catch (e: Exception) {
+            blocked(404)
+        }
+    }
+
+    private fun blocked(code: Int = 403) =
+        WebResourceResponse("text/plain", "utf-8", code, if (code == 404) "Not found" else "Blocked", emptyMap(), null)
+
+    private val MIME = mapOf(
+        "html" to "text/html", "css" to "text/css", "js" to "text/javascript", "json" to "application/json",
+        "svg" to "image/svg+xml", "png" to "image/png", "webp" to "image/webp", "jpg" to "image/jpeg",
+        "woff2" to "font/woff2", "txt" to "text/plain",
+    )
 
     /** Hides the status and navigation bars. Call again when the window regains focus. */
     fun immersive(activity: Activity) {
@@ -108,12 +151,6 @@ object WebHost {
                 or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
                 or View.SYSTEM_UI_FLAG_FULLSCREEN)
         }
-    }
-
-    private fun isBundled(uri: Uri): Boolean {
-        if (uri.scheme != "file" || !uri.host.isNullOrEmpty()) return false
-        val segments = uri.pathSegments
-        return segments.size >= 2 && segments[0] == "android_asset" && segments[1] == "web" && ".." !in segments
     }
 
     fun refresh(web: WebView?) {

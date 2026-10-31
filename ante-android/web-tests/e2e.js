@@ -418,6 +418,24 @@ async function noOverflow(p, label) {
   await shot(s, "22-small-poker");
   check(s.errors.length === 0, "no console errors at 340px: " + s.errors.join(" | "));
 
+  /* Over-the-air update: waits during a round, switches when calm, says so after the reload */
+  const u = await page(browser, "?acc=1");
+  await u.click('[data-t="tables"]'); await u.waitForTimeout(150);
+  await u.click('[data-a="game"][data-id="coin"]'); await u.waitForTimeout(150);
+  const reloads = [];
+  u.on("framenavigated", f => { if (f === u.mainFrame()) reloads.push(f.url()); });
+  await u.evaluate(() => window.anteUpdateReady(1));
+  await u.waitForTimeout(300);
+  check(reloads.length === 0, "an update waits while a table is open");
+  await u.click('[data-a="leave"]');
+  await u.waitForSelector(".toast, [role=status]", { timeout: 4000 }).catch(() => {});
+  await u.waitForTimeout(600);
+  check(reloads.length === 1, "the update applies once the table is closed");
+  check(await u.isVisible("text=Ante just updated itself."), "after an update, a short note says so");
+  await u.click('[data-t="profile"]'); await u.waitForTimeout(200);
+  check(await u.isVisible("text=built-in UI") || await u.isVisible("text=web demo"), "profile shows which UI version runs");
+  check(u.errors.length === 0, "no console errors around updates: " + u.errors.join(" | "));
+
   await browser.close();
   console.log(failures.length ? `\n${failures.length} check(s) failed` : "\nAll checks passed");
   process.exit(failures.length ? 1 : 0);
