@@ -22,7 +22,7 @@ class TimeBankTest {
         assertEquals(1200, b.limitFor(ig)!!.leftSec)
     }
 
-    @Test fun changingLimitShiftsRemainingByTheDifference() {
+    @Test fun loweringLimitTakesEffectNow() {
         val b = bank()
         b.startSession(ig, 600, 0)
         b.endSession(600_000) // used all 600
@@ -31,6 +31,29 @@ class TimeBankTest {
         assertEquals(300, b.limitFor(ig)!!.leftSec)
         b.setLimit(ig, "Instagram", 60) // would go negative -> clamps to 0
         assertEquals(0, b.limitFor(ig)!!.leftSec)
+    }
+
+    @Test fun raisingLimitOnlyCountsFromTomorrow() {
+        val b = bank()
+        b.placeBet(ig, 1200) // budget gone
+        b.setLimit(ig, "Instagram", 3600)
+        assertEquals(0, b.limitFor(ig)!!.leftSec)
+        assertEquals(3600, b.limitFor(ig)!!.limitSec)
+        b.rollover("2026-11-01")
+        assertEquals(3600, b.limitFor(ig)!!.leftSec)
+    }
+
+    @Test fun removingAndReAddingDoesNotRefillToday() {
+        val b = bank()
+        b.startSession(ig, 1200, 0)
+        b.endSession(1_200_000)
+        b.removeLimit(ig)
+        b.setLimit(ig, "Instagram", 1800)
+        assertEquals(0, b.limitFor(ig)!!.leftSec)
+        b.rollover("2026-11-01")
+        b.removeLimit(ig)
+        b.setLimit(ig, "Instagram", 1800)
+        assertEquals(1800, b.limitFor(ig)!!.leftSec)
     }
 
     @Test fun limitIsClampedToAllowedRange() {
@@ -90,12 +113,20 @@ class TimeBankTest {
         assertEquals(1140, b.limitFor(ig)!!.leftSec)
     }
 
-    @Test fun switchingAwayEndsSessionWithRefund() {
+    @Test fun goingHomeEndsSessionWithRefund() {
         val b = bank()
         b.startSession(ig, 600, 0)
-        assertEquals(Decision.ALLOW, b.onForeground(maps, 60_000))
+        assertEquals(Decision.ALLOW, b.onForeground("launcher", 60_000, isHome = true))
         assertNull(b.state.session)
         assertEquals(1140, b.limitFor(ig)!!.leftSec)
+    }
+
+    @Test fun pickersAndOtherAppsKeepTheSessionRunning() {
+        val b = bank()
+        b.startSession(ig, 600, 0)
+        assertEquals(Decision.ALLOW, b.onForeground("com.google.android.documentsui", 30_000))
+        assertEquals(Decision.ALLOW, b.onForeground(ig, 40_000))
+        assertEquals(600, b.state.session!!.grantedSec)
     }
 
     @Test fun switchingToAnotherLimitedAppRefundsAndBlocks() {
@@ -136,7 +167,7 @@ class TimeBankTest {
     @Test fun settleWithoutAPlacedStakePaysNothing() {
         val b = bank()
         val net = b.settleBet(ig, "Slots", 300, 30_000, 0)
-        assertEquals(0, net)
+        assertEquals(TimeBank.INVALID_SETTLE, net)
         assertEquals(1200, b.limitFor(ig)!!.leftSec)
         assertTrue(b.state.ledger.isEmpty())
     }

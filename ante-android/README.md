@@ -48,7 +48,11 @@ How time works:
 - **Opening an app for N minutes** reserves N minutes.
 - **Leaving early** refunds the unused part as soon as another app comes to the front.
 - **Running out of session time** while still in the app brings the block screen back.
+- **Other apps:** a picker, permission dialog or browser tab opened from inside the app does not end the session. Going home or opening another limited app does.
+- **Changing limits:** lowering a limit applies now. Raising it adds the extra time from tomorrow, and a limit removed and added back keeps today's remaining time, so neither can be used to skip a block.
+- **Sleep:** the session is checked again whenever the screen turns on or any window changes, because Android timers pause in deep sleep.
 - **Payout cap:** a payout can never be more than 100× its stake, and a payout with no matching stake is ignored.
+- **Failed rounds:** if a round fails mid-animation, the stake is refunded.
 
 The app uses no AndroidX or other libraries, only the Android framework.
 
@@ -66,7 +70,7 @@ The app uses no AndroidX or other libraries, only the Android framework.
 
 | Command | What it checks |
 |---|---|
-| `./gradlew test` | 22 JUnit tests for `TimeBank` and the JSON codec |
+| `./gradlew test` | 25 JUnit tests for `TimeBank` and the JSON codec |
 | `node --test web-tests/games.test.js` | 14 tests of game rules and returns (exact slots return, roulette 36/37, simulated blackjack) |
 | `node web-tests/e2e.js` | Full UI run in Chromium with Playwright and the browser mock |
 

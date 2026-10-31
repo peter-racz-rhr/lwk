@@ -60,13 +60,14 @@
         { game: "Roulette", pkg: "com.google.android.youtube", deltaSec: -300, atMs: now - 7200e3 },
       ],
       session: null,
+      parked: {},
     };
   }
   let S;
   try { S = JSON.parse(localStorage.getItem(KEY)); } catch (e) { S = null; }
   if (!S || !Array.isArray(S.limits) || q.get("reset") === "1") S = fresh();
   if (q.get("acc") === "1") S.accessibility = true;
-  if (S.day !== today()) { S.day = today(); S.limits.forEach(l => { l.leftSec = l.limitSec; }); S.ledger = []; }
+  if (S.day !== today()) { S.day = today(); S.limits.forEach(l => { l.leftSec = l.limitSec; }); S.ledger = []; S.parked = {}; }
   const open = {};
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* private mode */ } };
   const lim = pkg => S.limits.find(l => l.pkg === pkg);
@@ -84,14 +85,21 @@
     },
     apps: () => apps.slice(),
     icon: pkg => (apps.find(a => a.pkg === pkg) || {}).icon || "",
+    // Same rules as TimeBank.setLimit: cuts apply now, raises from tomorrow, removed limits remember their time.
     setLimit(pkg, label, sec) {
       sec = Math.max(60, Math.min(86400, sec | 0));
+      S.parked = S.parked || {};
       const l = lim(pkg);
-      if (l) { l.leftSec = Math.max(0, l.leftSec + sec - l.limitSec); l.limitSec = sec; l.label = label; }
-      else S.limits.push({ pkg, label, limitSec: sec, leftSec: sec });
+      if (l) { l.leftSec = Math.max(0, l.leftSec - Math.max(0, l.limitSec - sec)); l.limitSec = sec; l.label = label; }
+      else S.limits.push({ pkg, label, limitSec: sec, leftSec: pkg in S.parked ? Math.min(sec, S.parked[pkg]) : sec });
+      delete S.parked[pkg];
       save(); return true;
     },
-    removeLimit(pkg) { S.limits = S.limits.filter(l => l.pkg !== pkg); save(); return true; },
+    removeLimit(pkg) {
+      const l = lim(pkg); if (!l) return true;
+      S.parked = S.parked || {}; S.parked[pkg] = Math.min(l.leftSec, l.limitSec);
+      S.limits = S.limits.filter(x => x.pkg !== pkg); save(); return true;
+    },
     bet(pkg, sec) {
       const l = lim(pkg); sec |= 0;
       if (!l || sec <= 0 || sec > l.leftSec) return false;
@@ -99,7 +107,7 @@
     },
     settle(pkg, game, stake, ret) {
       const l = lim(pkg); stake |= 0;
-      if (!l || stake <= 0 || stake > (open[pkg] || 0)) return 0;
+      if (!l || stake <= 0 || stake > (open[pkg] || 0)) return -2147483648;
       open[pkg] -= stake;
       ret = Math.max(0, Math.min(Math.round(ret), stake * 100));
       l.leftSec += ret;

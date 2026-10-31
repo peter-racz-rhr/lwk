@@ -2,6 +2,7 @@ package com.ante.app
 
 import android.app.Activity
 import android.os.Bundle
+import android.view.ViewGroup
 import android.webkit.WebView
 
 /** Ante's own screen: today's limits, the app picker and the tables. */
@@ -35,7 +36,7 @@ class MainActivity : Activity() {
     }
 
     override fun onDestroy() {
-        web?.destroy()
+        web?.let { (it.parent as? ViewGroup)?.removeView(it); it.destroy() }
         web = null
         super.onDestroy()
     }

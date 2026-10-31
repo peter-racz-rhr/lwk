@@ -1,8 +1,13 @@
 package com.ante.app
 
 import android.accessibilityservice.AccessibilityService
+import android.content.BroadcastReceiver
 import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
@@ -17,39 +22,72 @@ class AppWatcherService : AccessibilityService() {
     private val handler = Handler(Looper.getMainLooper())
     private val expiryCheck = Runnable { checkExpiry() }
     private var foreground: String? = null
+    private var homePackages: Set<String> = emptySet()
+
+    /** Handler delays pause in deep sleep, so re-check the session whenever the screen comes back. */
+    private val wakeReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) = checkExpiry()
+    }
+    private var receiverRegistered = false
 
     override fun onServiceConnected() {
         super.onServiceConnected()
         Bank.init(this)
         instance = this
+        homePackages = findHomePackages()
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_SCREEN_ON)
+            addAction(Intent.ACTION_USER_PRESENT)
+            addAction(Intent.ACTION_TIME_CHANGED)
+            addAction(Intent.ACTION_TIMEZONE_CHANGED)
+        }
+        if (Build.VERSION.SDK_INT >= 33) registerReceiver(wakeReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        else registerReceiver(wakeReceiver, filter)
+        receiverRegistered = true
         scheduleExpiry()
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event?.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
+        // Any window change is a chance to catch a session that ran out while the timer slept.
+        if (Bank.read { it.state.session } != null) checkExpiry()
         val pkg = event.packageName?.toString() ?: return
         if (pkg in IGNORED || pkg == currentKeyboard()) return
         if (!isActivityWindow(pkg, event.className?.toString())) return
         if (pkg == foreground && pkg != packageName) return // same app, new screen inside it
         foreground = pkg
 
-        val decision = Bank.edit { it.onForeground(pkg, System.currentTimeMillis()) }
+        val isHome = pkg in homePackages
+        val decision = Bank.edit { it.onForeground(pkg, System.currentTimeMillis(), isHome) }
         if (decision == Decision.BLOCK && pkg != packageName) BlockActivity.show(this, pkg, null)
         scheduleExpiry()
     }
 
     override fun onInterrupt() = Unit
 
-    override fun onUnbind(intent: android.content.Intent?): Boolean {
-        handler.removeCallbacks(expiryCheck)
-        if (instance === this) instance = null
+    override fun onUnbind(intent: Intent?): Boolean {
+        shutdown()
         return super.onUnbind(intent)
     }
 
     override fun onDestroy() {
-        handler.removeCallbacks(expiryCheck)
-        if (instance === this) instance = null
+        shutdown()
         super.onDestroy()
+    }
+
+    private fun shutdown() {
+        handler.removeCallbacks(expiryCheck)
+        if (receiverRegistered) {
+            try { unregisterReceiver(wakeReceiver) } catch (e: IllegalArgumentException) { /* already gone */ }
+            receiverRegistered = false
+        }
+        if (instance === this) instance = null
+    }
+
+    private fun findHomePackages(): Set<String> {
+        val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+        @Suppress("DEPRECATION")
+        return packageManager.queryIntentActivities(intent, 0).mapNotNull { it.activityInfo?.packageName }.toSet()
     }
 
     /** Wakes up when the current session's time is up. */

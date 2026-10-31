@@ -30,6 +30,8 @@ data class BankState(
     val limits: List<Limit> = emptyList(),
     val ledger: List<Bet> = emptyList(),
     val session: Session? = null,
+    /** Time left on limits removed today, so removing and re-adding a limit can't refill it. */
+    val parked: Map<String, Int> = emptyMap(),
 )
 
 enum class Decision { ALLOW, BLOCK }

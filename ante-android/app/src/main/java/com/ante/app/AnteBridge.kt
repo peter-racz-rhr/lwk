@@ -46,6 +46,7 @@ class AnteBridge(
         return o.toString()
     }
 
+    /** Installed apps without icons (fast); the page fetches icons one by one with [icon]. */
     @JavascriptInterface
     fun apps(): String = AppCatalog.launchableApps(ctx).toString()
 
@@ -86,8 +87,14 @@ class AnteBridge(
         AppWatcherService.instance?.scheduleExpiry()
         activity.runOnUiThread {
             launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            activity.startActivity(launch)
-            if (activity is BlockActivity) activity.finish()
+            try {
+                activity.startActivity(launch)
+                if (activity is BlockActivity) activity.finish()
+            } catch (e: Exception) {
+                // App vanished between the check and the launch: give the reserved time back.
+                Bank.edit { it.endSession(System.currentTimeMillis()) }
+                webView.evaluateJavascript("window.anteRefresh && window.anteRefresh()", null)
+            }
         }
         return true
     }
@@ -144,10 +151,11 @@ class AnteBridge(
         return enabled.split(':').any { ComponentName.unflattenFromString(it) == me }
     }
 
-    private fun validPkg(pkg: String?): Boolean =
-        pkg != null && pkg.length in 1..255 && PKG.matches(pkg)
+    private fun validPkg(pkg: String?): Boolean = isValidPackage(pkg)
 
     companion object {
         private val PKG = Regex("^[A-Za-z0-9_]+(\\.[A-Za-z0-9_]+)*$")
+
+        fun isValidPackage(pkg: String?): Boolean = pkg != null && pkg.length in 1..255 && PKG.matches(pkg)
     }
 }

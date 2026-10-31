@@ -11,6 +11,7 @@ class CodecTest {
             limits = listOf(Limit("com.a", "A \"quoted\" app", 1200, 840)),
             ledger = listOf(Bet("Roulette", "com.a", -300, 1730000000000)),
             session = Session("com.a", 1730000000000, 300),
+            parked = mapOf("com.b" to 120),
         )
         assertEquals(state, Codec.decode(Codec.encode(state)))
     }

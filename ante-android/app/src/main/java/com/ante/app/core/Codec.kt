@@ -19,6 +19,7 @@ object Codec {
                 put(JSONObject().put("game", it.game).put("pkg", it.pkg).put("deltaSec", it.deltaSec).put("atMs", it.atMs))
             }
         })
+        put("parked", JSONObject().apply { s.parked.forEach { (k, v) -> put(k, v) } })
         val session = s.session
         if (session != null) {
             put("session", JSONObject().put("pkg", session.pkg).put("startedAtMs", session.startedAtMs).put("grantedSec", session.grantedSec))
@@ -43,6 +44,9 @@ object Codec {
                     val pkg = j.optString("pkg", "")
                     if (pkg.isEmpty()) null else Session(pkg, j.optLong("startedAtMs", 0), j.optInt("grantedSec", 0))
                 },
+                parked = o.optJSONObject("parked")?.let { j ->
+                    j.keys().asSequence().associateWith { j.optInt(it, 0) }
+                } ?: emptyMap(),
             )
         } catch (e: Exception) {
             BankState()

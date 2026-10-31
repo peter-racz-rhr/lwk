@@ -7,7 +7,9 @@ import android.graphics.Color
 import android.os.Build
 import android.view.ViewGroup
 import android.view.WindowInsets
+import android.net.Uri
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
@@ -38,9 +40,13 @@ object WebHost {
             settings.mediaPlaybackRequiresUserGesture = true
             settings.textZoom = 100
             webViewClient = object : WebViewClient() {
-                // The UI is local only. Refuse every navigation away from the bundled files.
+                // The UI is local only. Refuse every navigation and every request outside the bundled files.
                 override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean =
-                    !request.url.toString().startsWith("file:///android_asset/web/")
+                    !isBundled(request.url)
+
+                override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? =
+                    if (isBundled(request.url) || request.url.scheme == "data") null
+                    else WebResourceResponse("text/plain", "utf-8", 403, "Blocked", emptyMap(), null)
             }
         }
         web.addJavascriptInterface(AnteBridge(activity, web, mode, blockedPkg, blockNote), "AnteNative")
@@ -61,6 +67,12 @@ object WebHost {
         activity.setContentView(root)
         web.loadUrl(START_URL)
         return web
+    }
+
+    private fun isBundled(uri: Uri): Boolean {
+        if (uri.scheme != "file" || !uri.host.isNullOrEmpty()) return false
+        val segments = uri.pathSegments
+        return segments.size >= 2 && segments[0] == "android_asset" && segments[1] == "web" && ".." !in segments
     }
 
     fun refresh(web: WebView?) {

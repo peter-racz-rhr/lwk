@@ -214,6 +214,19 @@
   /* ---------- sheets ---------- */
   function vSheet() {
     const sh = ui.sheet; if (!sh) return "";
+    if (sh.type === "consent") {
+      return `<div class="scrim" data-a="closeSheet"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="consent-h" data-stop>
+        <div class="sheet-head"><h2 class="h2" id="consent-h">Before you switch it on</h2><button class="iconbtn" data-a="closeSheet" aria-label="Close">${ICON.close}</button></div>
+        <p>Ante uses Android's Accessibility service to see <b>which app is in front</b>, so it can cover apps that are over their limit.</p>
+        <ul class="facts">
+          <li>It only sees the name of the app you open.</li>
+          <li>It does not read what is on your screen, what you type or your notifications.</li>
+          <li>Nothing leaves your phone. Ante has no internet permission.</li>
+        </ul>
+        <p class="muted">You can switch it off any time in Settings → Accessibility.</p>
+        <div class="btn-row"><button class="btn quiet" data-a="closeSheet">Not now</button><button class="btn primary" data-a="agreeAcc">I agree, open Settings</button></div>
+      </div></div>`;
+    }
     if (sh.type === "pick") {
       const q = (sh.q || "").toLowerCase();
       const list = (sh.apps || []).filter(a => !lim(a.pkg) && (!q || a.label.toLowerCase().includes(q)));
@@ -237,8 +250,26 @@
         <button class="step" data-a="limStep" data-d="300" aria-label="Five minutes more" ${sh.limit >= 14400 ? "disabled" : ""}>+</button>
       </div>
       <div class="chips">${[[900, "15:00"], [1200, "20:00"], [1800, "30:00"], [3600, "1:00:00"]].map(([v, t]) => `<button class="chip" data-a="limSet" data-v="${v}" aria-pressed="${sh.limit === v}">${t}</button>`).join("")}</div>
+      ${l && sh.limit > l.limitSec ? `<p class="muted">The extra ${fmt(sh.limit - l.limitSec)} starts tomorrow. Cuts apply straight away.</p>` : ""}
       <div class="btn-row">${l ? `<button class="btn danger" data-a="removeLimit">Remove limit</button>` : ""}<button class="btn primary" data-a="saveLimit">${l ? "Save" : "Add limit"}</button></div>
     </div></div>`;
+  }
+  /* Fetch picker icons a few at a time so the list appears instantly. */
+  function loadIcons(list) {
+    let i = 0;
+    const step = () => {
+      if (!ui.sheet || ui.sheet.type !== "pick") return;
+      for (const end = Math.min(i + 6, list.length); i < end; i++) {
+        const a = list[i];
+        if (a.icon) continue;
+        try { a.icon = A.icon(a.pkg) || ""; } catch (e) { a.icon = ""; }
+        icons[a.pkg] = a.icon;
+        const el = a.icon && document.querySelector(`.pick-list [data-pkg="${CSS.escape(a.pkg)}"] .appicon.mono`);
+        if (el) { const img = new Image(44, 44); img.className = "appicon"; img.alt = ""; img.src = a.icon; el.replaceWith(img); }
+      }
+      if (i < list.length) setTimeout(step, 16);
+    };
+    step();
   }
   function paintOverlay() {
     const focusSearch = document.activeElement && document.activeElement.id === "app-search";
@@ -334,14 +365,35 @@
     renderNav();
   }
 
-  function takeStake(sec) {
+  const INVALID_SETTLE = -2147483648;
+  function takeStake(sec, game) {
     if (!A.bet(ui.stakePkg, sec)) { toast(`Not enough ${labelOf(ui.stakePkg)} time for that stake.`); return false; }
+    ui.pending = { game, stake: (ui.pending ? ui.pending.stake : 0) + sec };
     refresh(); return true;
+  }
+  /* Runs a round. If anything throws after the stake was taken, the stake goes back. */
+  function guarded(fn) {
+    return async function () {
+      try { await fn.apply(this, arguments); }
+      catch (err) {
+        console.warn("round failed", err);
+        if (ui.pending) { A.settle(ui.stakePkg, ui.pending.game, ui.pending.stake, ui.pending.stake); ui.pending = null; }
+        ui.busy = false; ui.round = null; ui.res = { tone: "loss", text: "That round broke. Your stake is back." };
+        refresh(); renderControls();
+      }
+    };
   }
   function finish(gameName, stake, multiple, prefix) {
     const ret = Math.round(stake * multiple);
     const net = A.settle(ui.stakePkg, gameName, stake, ret);
+    ui.pending = null;
     refresh();
+    if (net === INVALID_SETTLE) {
+      ui.res = { tone: "loss", text: "This round couldn't be paid out because Ante restarted mid-round." };
+      ui.busy = false; ui.round = null;
+      const r0 = document.getElementById("result"); if (r0) r0.textContent = ui.res.text;
+      renderControls(); return;
+    }
     const app = labelOf(ui.stakePkg);
     let tone = "", text;
     if (net > 0) { tone = "win"; text = `${prefix}You win ${fmt(net)} of ${app}.`; }
@@ -359,14 +411,14 @@
   const begin = () => { ui.busy = true; ui.res = null; renderControls(); };
 
   async function coinFlip() {
-    const stake = ui.stake; if (!takeStake(stake)) return;
+    const stake = ui.stake; if (!takeStake(stake, "Coin flip")) return;
     begin();
     const r = G.coinFlip(ui.pick);
     await table.flip(r.result);
     finish("Coin flip", stake, r.multiple, (r.result === "H" ? "Heads. " : "Tails. "));
   }
   async function rSpin() {
-    const stake = ui.stake; if (!takeStake(stake)) return;
+    const stake = ui.stake; if (!takeStake(stake, "Roulette")) return;
     begin();
     const n = G.rouletteSpin();
     let ticks = 0;
@@ -376,7 +428,7 @@
     finish("Roulette", stake, G.rouletteMultiple(ui.bet, n, ui.num), `${n} ${color}. `);
   }
   async function sSpin() {
-    const stake = ui.stake; if (!takeStake(stake)) return;
+    const stake = ui.stake; if (!takeStake(stake, "Slots")) return;
     begin();
     const reels = G.slotSpin();
     await table.spin(reels, () => haptic("tick"));
@@ -388,7 +440,7 @@
 
   const draw = () => { if (ui.shoe.length < 20) ui.shoe = G.newShoe(); return ui.shoe.pop(); };
   async function bjDeal() {
-    const stake = ui.stake; if (!takeStake(stake)) return;
+    const stake = ui.stake; if (!takeStake(stake, "Blackjack")) return;
     const R = ui.round = { phase: "deal", stake, p: [draw(), draw()], d: [draw(), draw()] };
     begin();
     table.chip(fmt(stake));
@@ -409,7 +461,7 @@
   }
   async function bjDouble() {
     const R = ui.round; if (!R || ui.busy) return;
-    if (!takeStake(R.stake)) return;
+    if (!takeStake(R.stake, "Blackjack")) return;
     R.stake *= 2; table.chip(fmt(R.stake));
     ui.busy = true; renderControls();
     const card = draw(); R.p.push(card);
@@ -435,7 +487,7 @@
   }
 
   async function pDeal() {
-    const stake = ui.stake; if (!takeStake(stake)) return;
+    const stake = ui.stake; if (!takeStake(stake, "Poker")) return;
     const deck = G.shuffledDeck();
     const R = ui.round = { phase: "deal", stake, deck, hand: deck.splice(0, 5), held: [false, false, false, false, false] };
     begin();
@@ -456,11 +508,12 @@
   /* ---------- actions ---------- */
   const ACT = {
     tab(d) { ui.view = d.t; ui.game = null; render(); },
-    openAcc() { A.openAccessibilitySettings(); setTimeout(() => { refresh(); render(); }, 300); },
+    openAcc() { ui.sheet = { type: "consent" }; paintOverlay(); },
+    agreeAcc() { ui.sheet = null; paintOverlay(); A.openAccessibilitySettings(); setTimeout(() => { refresh(); render(); }, 300); },
     openInfo() { A.openAppInfo(); },
     add() {
       ui.sheet = { type: "pick", apps: null, q: "" }; paintOverlay();
-      setTimeout(() => { if (ui.sheet && ui.sheet.type === "pick") { ui.sheet.apps = A.apps(); paintOverlay(); } }, 30);
+      setTimeout(() => { if (ui.sheet && ui.sheet.type === "pick") { ui.sheet.apps = A.apps(); paintOverlay(); loadIcons(ui.sheet.apps); } }, 30);
     },
     pickApp(d) {
       const a = (ui.sheet.apps || []).find(x => x.pkg === d.pkg); if (!a) return;
@@ -486,7 +539,9 @@
     coinPick(d) { ui.pick = d.v; renderControls(); },
     rBet(d) { ui.bet = d.v; haptic("tap"); renderControls(); },
     rNum(d) { ui.num = (ui.num + Number(d.d) + 37) % 37; ui.bet = "num"; renderControls(); },
-    coinFlip, rSpin, sSpin, bjDeal, bjHit, bjStand: () => { if (!ui.busy) bjSettle(); }, bjDouble, pDeal, pDraw,
+    coinFlip: guarded(coinFlip), rSpin: guarded(rSpin), sSpin: guarded(sSpin),
+    bjDeal: guarded(bjDeal), bjHit: guarded(bjHit), bjStand: guarded(async () => { if (!ui.busy) await bjSettle(); }),
+    bjDouble: guarded(bjDouble), pDeal: guarded(pDeal), pDraw: guarded(pDraw),
     pickOpen(d) { ui.openPick = Number(d.v); haptic("tap"); render(); },
     openApp() {
       if (!A.open(CTX.pkg, ui.openPick)) { toast("Couldn't open that app. It may have been uninstalled."); return; }

@@ -35,8 +35,13 @@ object Bank {
         return result
     }
 
-    /** Read-only access. Still runs the rollover so a stale day never shows. */
-    fun <T> read(block: (TimeBank) -> T): T = edit(block)
+    /** Read-only access. Still runs the rollover so a stale day never shows, but only saves when it rolled over. */
+    @Synchronized
+    fun <T> read(block: (TimeBank) -> T): T {
+        val b = checkNotNull(bank) { "Bank.init() was not called" }
+        if (b.rollover(today())) prefs?.edit()?.putString(KEY, Codec.encode(b.state))?.apply()
+        return block(b)
+    }
 
     private fun today(): String = LocalDate.now().toString()
 }

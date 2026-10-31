@@ -29,13 +29,9 @@ object AppCatalog {
         }.sortedBy { it.second.lowercase() }
 
         val out = JSONArray()
-        for ((pkg, label, info) in rows) {
-            val icon = synchronized(iconCache) { iconCache[pkg] } ?: try {
-                encode(info.loadIcon(pm)).also { synchronized(iconCache) { iconCache[pkg] = it } }
-            } catch (e: Exception) {
-                ""
-            }
-            out.put(JSONObject().put("pkg", pkg).put("label", label).put("icon", icon))
+        for ((pkg, label, _) in rows) {
+            val cached = synchronized(iconCache) { iconCache[pkg] } ?: ""
+            out.put(JSONObject().put("pkg", pkg).put("label", label).put("icon", cached))
         }
         return out
     }

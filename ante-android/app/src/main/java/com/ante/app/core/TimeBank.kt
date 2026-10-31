@@ -19,6 +19,7 @@ class TimeBank(initial: BankState = BankState()) {
             limits = state.limits.map { it.copy(leftSec = it.limitSec) },
             ledger = emptyList(),
             session = null,
+            parked = emptyMap(),
         )
         openStakes.clear()
         return true
@@ -26,23 +27,38 @@ class TimeBank(initial: BankState = BankState()) {
 
     fun limitFor(pkg: String): Limit? = state.limits.firstOrNull { it.pkg == pkg }
 
+    /**
+     * Adds or changes a limit. Lowering a limit takes effect now; raising one only adds time from
+     * tomorrow, so a limit can't be pushed up to get around today's block. A limit removed earlier
+     * today comes back with the time it had left.
+     */
     fun setLimit(pkg: String, label: String, limitSec: Int): Limit {
         val clamped = limitSec.coerceIn(MIN_LIMIT_SEC, MAX_LIMIT_SEC)
         val existing = limitFor(pkg)
         val updated = if (existing == null) {
-            Limit(pkg, label, clamped, clamped)
+            val left = state.parked[pkg]?.coerceAtMost(clamped) ?: clamped
+            Limit(pkg, label, clamped, left)
         } else {
-            val left = (existing.leftSec.toLong() + clamped - existing.limitSec).coerceIn(0, Int.MAX_VALUE.toLong()).toInt()
+            val cut = (existing.limitSec - clamped).coerceAtLeast(0)
+            val left = (existing.leftSec - cut).coerceAtLeast(0)
             existing.copy(label = label, limitSec = clamped, leftSec = left)
         }
-        state = state.copy(limits = if (existing == null) state.limits + updated else state.limits.map { if (it.pkg == pkg) updated else it })
+        state = state.copy(
+            limits = if (existing == null) state.limits + updated else state.limits.map { if (it.pkg == pkg) updated else it },
+            parked = state.parked - pkg,
+        )
         return updated
     }
 
     fun removeLimit(pkg: String) {
+        val existing = limitFor(pkg) ?: return
+        val session = state.session
+        // Unused session time counts as left when parking the limit.
+        val reserved = if (session != null && session.pkg == pkg) session.grantedSec else 0
         state = state.copy(
             limits = state.limits.filterNot { it.pkg == pkg },
-            session = state.session?.takeUnless { it.pkg == pkg },
+            session = session?.takeUnless { it.pkg == pkg },
+            parked = state.parked + (pkg to (existing.leftSec + reserved).coerceAtMost(existing.limitSec)),
         )
         openStakes.remove(pkg)
     }
@@ -80,18 +96,23 @@ class TimeBank(initial: BankState = BankState()) {
         return s.pkg
     }
 
-    /** Called whenever a different app comes to the front. */
-    fun onForeground(pkg: String, nowMs: Long): Decision {
+    /**
+     * Called whenever a different app comes to the front. A session ends early (with a refund) only
+     * when the user goes home or opens another limited app; pickers, permission dialogs and browser
+     * tabs opened from inside the app leave it running.
+     */
+    fun onForeground(pkg: String, nowMs: Long, isHome: Boolean = false): Decision {
         val session = state.session
+        val limited = limitFor(pkg) != null
         if (session != null) {
             if (session.pkg == pkg) {
                 if (nowMs < session.endsAtMs) return Decision.ALLOW
                 expireSession(nowMs)
-            } else {
+            } else if (isHome || limited) {
                 endSession(nowMs)
             }
         }
-        return if (limitFor(pkg) != null) Decision.BLOCK else Decision.ALLOW
+        return if (limited) Decision.BLOCK else Decision.ALLOW
     }
 
     /** Takes a stake from the app's budget. */
@@ -105,11 +126,11 @@ class TimeBank(initial: BankState = BankState()) {
 
     /**
      * Pays [returnSec] back for a stake placed earlier with [placeBet]. Returns the net change.
-     * A settle without a matching open stake pays nothing, and the return is capped.
+     * A settle without a matching open stake pays nothing and returns [INVALID_SETTLE]; the return is capped.
      */
     fun settleBet(pkg: String, game: String, stakeSec: Int, returnSec: Int, nowMs: Long): Int {
         val open = openStakes[pkg] ?: 0
-        if (stakeSec <= 0 || stakeSec > open || limitFor(pkg) == null) return 0
+        if (stakeSec <= 0 || stakeSec > open || limitFor(pkg) == null) return INVALID_SETTLE
         openStakes[pkg] = open - stakeSec
         val ret = returnSec.toLong().coerceIn(0, stakeSec.toLong() * MAX_RETURN_MULTIPLE).toInt()
         if (ret > 0) adjustLeft(pkg, ret)
@@ -130,5 +151,8 @@ class TimeBank(initial: BankState = BankState()) {
         const val MAX_LIMIT_SEC = 24 * 60 * 60
         const val MAX_RETURN_MULTIPLE = 100
         const val LEDGER_MAX = 50
+
+        /** Returned by [settleBet] when there is no matching open stake. */
+        const val INVALID_SETTLE = Int.MIN_VALUE
     }
 }

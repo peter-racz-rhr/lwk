@@ -38,6 +38,10 @@ async function noOverflow(p, label) {
   await shot(p, "01-today-permission");
   check(await p.isVisible("text=Let Ante see which app you open"), "permission card shows when the switch is off");
   await p.click("text=Open Accessibility settings");
+  await p.waitForSelector('[data-a="agreeAcc"]');
+  check(await p.isVisible("text=does not read what is on your screen"), "disclosure shows before Settings");
+  await shot(p, "01b-consent");
+  await p.click('[data-a="agreeAcc"]');
   await p.waitForTimeout(400);
   check(!(await p.isVisible("text=Let Ante see which app you open")), "permission card hides after switching on");
   await shot(p, "02-today");
@@ -55,6 +59,17 @@ async function noOverflow(p, label) {
   await p.waitForTimeout(200);
   check(await p.isVisible('.limit[data-pkg="com.reddit.frontpage"]'), "new limit appears on Today");
   check((await leftOf(p, "com.reddit.frontpage")) === 900, "new limit starts full");
+
+  /* Removing and re-adding a limit must not refill it */
+  await p.evaluate(() => { window.Ante.bet("com.reddit.frontpage", 900); });
+  await p.click('.limit[data-pkg="com.reddit.frontpage"]');
+  await p.click('[data-a="removeLimit"]');
+  await p.click('[data-a="add"]');
+  await p.waitForSelector('.pick-list [data-pkg="com.reddit.frontpage"]');
+  await p.click('.pick-list [data-pkg="com.reddit.frontpage"]');
+  await p.click('[data-a="saveLimit"]');
+  await p.waitForTimeout(200);
+  check((await leftOf(p, "com.reddit.frontpage")) === 0, "removing and re-adding a used-up limit keeps it at 0:00");
 
   /* Tables list */
   await p.click('[data-t="tables"]');

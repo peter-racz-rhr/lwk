@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.view.ViewGroup
 import android.webkit.WebView
 
 /**
@@ -24,8 +25,10 @@ class BlockActivity : Activity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        val before = pkg
         readIntent(intent)
-        web?.loadUrl(WebHost.START_URL)
+        // Same app again: keep the page (and any hand in progress), just refresh its numbers.
+        if (pkg != before) web?.loadUrl(WebHost.START_URL) else WebHost.refresh(web)
     }
 
     override fun onResume() {
@@ -53,7 +56,7 @@ class BlockActivity : Activity() {
     }
 
     override fun onDestroy() {
-        web?.destroy()
+        web?.let { (it.parent as? ViewGroup)?.removeView(it); it.destroy() }
         web = null
         super.onDestroy()
     }
@@ -64,8 +67,8 @@ class BlockActivity : Activity() {
     }
 
     private fun readIntent(i: Intent?) {
-        pkg = i?.getStringExtra(EXTRA_PKG)
-        note = i?.getStringExtra(EXTRA_NOTE)
+        pkg = i?.getStringExtra(EXTRA_PKG)?.takeIf { AnteBridge.isValidPackage(it) }
+        note = i?.getStringExtra(EXTRA_NOTE)?.take(80)
     }
 
     companion object {

@@ -94,6 +94,8 @@ img { max-width: 100%; }
 .help summary { cursor: pointer; font-size: var(--t-sm); font-weight: 600; color: var(--brass); min-height: 40px; display: flex; align-items: center; }
 .help[open] { display: flex; flex-direction: column; gap: var(--s3); }
 .empty { display: flex; flex-direction: column; gap: var(--s4); }
+.facts { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: var(--s2); color: var(--ivory-2); font-size: var(--t-sm); }
+.facts li::marker { color: var(--brass); }
 
 /* ---------- buttons ---------- */
 .btn { min-height: 52px; border-radius: var(--r-in); font-weight: 700; font-size: var(--t-md); display: flex; align-items: center; justify-content: center; gap: var(--s2); padding-inline: var(--s4); width: 100%; transition: transform .12s ease, filter .12s ease; }
