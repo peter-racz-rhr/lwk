@@ -213,14 +213,18 @@
     const cv = host.querySelector("canvas"), out = host.querySelector(".wheel-result");
     const N = G.WHEEL.length, STEP = (Math.PI * 2) / N;
     let size = 0, R = 0, dpr = 1, stator = null, rotor = null;
-    let wheelA = 0, ballA = -Math.PI / 2, ballR = 0, highlight = -1, showBall = false;
+    let wheelA = 0, ballA = -Math.PI / 2, ballR = 0, highlight = -1, showBall = false, spinning = false;
 
     function setup() {
       // Size from the box the wheel really gets, and let CSS keep it square (aspect-ratio 1),
       // so a narrow box shrinks both sides instead of squashing it into an oval.
       const wrap = cv.parentNode;
       const avail = Math.min(wrap.clientWidth || host.clientWidth || 300, host.clientWidth || 300);
-      const w = Math.max(80, Math.min(avail, MAX, Math.round(window.innerHeight * 0.5)));
+      // In a flex layout the felt's height is what's left on screen; fit inside that too.
+      const cs = getComputedStyle(host);
+      const innerH = host.clientHeight - parseFloat(cs.paddingTop || 0) - parseFloat(cs.paddingBottom || 0);
+      const byH = opts && opts.fitHeight && innerH > 60 ? innerH : Infinity;
+      const w = Math.max(80, Math.min(avail, byH, MAX, Math.round(window.innerHeight * 0.5)));
       dpr = Math.min(3, window.devicePixelRatio || 1);
       size = w; R = w / 2;
       cv.style.width = w + "px"; cv.style.height = "auto";
@@ -291,6 +295,8 @@
       return c;
     }
     function draw() {
+      // A landed ball rides its pocket when the wheel is turned by hand.
+      if (!spinning && highlight >= 0) ballA = wheelA + highlight * STEP - Math.PI / 2;
       const x = cv.getContext("2d");
       x.setTransform(1, 0, 0, 1, 0, 0);
       x.clearRect(0, 0, cv.width, cv.height);
@@ -317,25 +323,81 @@
     const smooth = t => t * t * (3 - 2 * t);
 
     setup();
-    let lastW = host.clientWidth;
-    const ro = window.ResizeObserver ? new ResizeObserver(() => { if (host.clientWidth !== lastW) { lastW = host.clientWidth; setup(); } }) : null;
+    let lastW = host.clientWidth, lastH = host.clientHeight;
+    const ro = window.ResizeObserver ? new ResizeObserver(() => {
+      if (host.clientWidth === lastW && host.clientHeight === lastH) return;
+      lastW = host.clientWidth; lastH = host.clientHeight; setup();
+    }) : null;
     if (ro) ro.observe(host);
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { rotor = drawRotor(); draw(); });
 
+    /* Spin it by hand: the wheel follows the finger round its centre; a quick flick spins it,
+       a slow push just lets it coast to a stop. */
+    let coastRaf = 0;
+    const FLICK = 0.006; // rad per ms needed to count as a spin
+    if (opts && opts.onFlick) {
+      cv.classList.add("grab");
+      let g = null;
+      const angleAt = e => { const r = cv.getBoundingClientRect(); return Math.atan2(e.clientY - (r.top + r.height / 2), e.clientX - (r.left + r.width / 2)); };
+      const nearCentre = e => { const r = cv.getBoundingClientRect(); return Math.hypot(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2)) < r.width * 0.12; };
+      cv.addEventListener("pointerdown", e => {
+        if (spinning || g || nearCentre(e)) return;
+        e.preventDefault(); cancelAnimationFrame(coastRaf);
+        g = { id: e.pointerId, a: angleAt(e), samples: [{ t: performance.now(), w: wheelA }] };
+        cv.setPointerCapture && cv.setPointerCapture(e.pointerId);
+        cv.classList.add("grabbing");
+      });
+      cv.addEventListener("pointermove", e => {
+        if (!g || e.pointerId !== g.id || nearCentre(e)) return;
+        const a = angleAt(e);
+        let d = a - g.a; if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2;
+        g.a = a; wheelA += d;
+        const now = performance.now();
+        g.samples.push({ t: now, w: wheelA });
+        while (g.samples.length > 2 && now - g.samples[0].t > 90) g.samples.shift();
+        draw();
+      });
+      const release = e => {
+        if (!g || e.pointerId !== g.id) return;
+        const smp = g.samples; g = null; cv.classList.remove("grabbing");
+        if (e.type === "pointercancel" || smp.length < 2) return;
+        const a = smp[0], b = smp[smp.length - 1];
+        const v = (b.w - a.w) / Math.max(8, b.t - a.t); // rad per ms
+        if (Math.abs(v) >= FLICK && opts.onFlick(v < 0 ? -1 : 1, (Math.abs(v) - FLICK) / 0.03)) return;
+        coast(v);
+      };
+      cv.addEventListener("pointerup", release);
+      cv.addEventListener("pointercancel", release);
+    }
+    function coast(v) {
+      let last = performance.now();
+      const step = now => {
+        const dt = now - last; last = now;
+        v *= Math.pow(0.996, dt); wheelA += v * dt; draw();
+        if (Math.abs(v) > 0.0002) coastRaf = requestAnimationFrame(step);
+      };
+      coastRaf = requestAnimationFrame(step);
+    }
+
     return {
-      spin(n, onTick) {
+      spin(n, onTick, flick) {
         const index = G.WHEEL.indexOf(n);
+        cancelAnimationFrame(coastRaf); spinning = true;
         highlight = -1; showBall = true; out.classList.remove("show");
-        const T = dur(6200);
-        const w0 = wheelA, W = Math.PI * 2 * (2.2 + Math.random() * 0.6);
+        // A hand flick sets the direction, and a harder flick spins a little longer.
+        const dir = flick && flick.dir < 0 ? -1 : 1, power = flick ? Math.max(0, Math.min(1, flick.power || 0)) : 0.5;
+        const T = dur(5600 + power * 1400);
+        const w0 = wheelA, W = dir * Math.PI * 2 * (1.9 + power * 0.9 + Math.random() * 0.4);
         const wf = w0 + W;
         const pocketScreen = wf + index * STEP - Math.PI / 2; // absolute angle of the pocket at the end
         const b0 = ballA;
-        let B = b0 - pocketScreen;
-        while (B < Math.PI * 2 * 8) B += Math.PI * 2; // ball travels 8+ turns the other way
+        // The ball runs the other way round: it travels -dir * B and must end on the pocket.
+        let B = dir * (b0 - pocketScreen);
+        B = ((B % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+        while (B < Math.PI * 2 * 8) B += Math.PI * 2; // 8+ turns
         // Free flight ends exactly TURNS full turns away from the pocket. Taking those turns out
         // of the blend makes the ball ease into its pocket instead of whipping round them again.
-        const TURNS = Math.round((B - (b0 - pocketScreen)) / (Math.PI * 2)) * Math.PI * 2;
+        const TURNS = Math.round((pocketScreen - (b0 - dir * B)) / (Math.PI * 2)) * Math.PI * 2;
         const rim = R * 0.85, pocket = R * 0.655;
         let lastPocket = -1, dropped = false;
         sfx("wheelSpin");
@@ -344,7 +406,7 @@
           function frame(now) {
             const t = Math.min(1, (now - t0) / T);
             wheelA = w0 + W * easeOut(t, 3);
-            const free = b0 - B * easeOut(t, 2.4);
+            const free = b0 - dir * B * easeOut(t, 2.4);
             // Ball drops off the track between 55% and 80%, rattles, then rides its pocket.
             if (t < 0.55) ballR = rim;
             else if (t < 0.8) {
@@ -364,7 +426,7 @@
             if (t < 1) requestAnimationFrame(frame);
             else {
               wheelA %= Math.PI * 2; ballA = wheelA + index * STEP - Math.PI / 2;
-              highlight = index; draw();
+              highlight = index; draw(); spinning = false;
               out.textContent = String(n);
               out.className = "wheel-result show " + G.pocketColor(n);
               resolve();
@@ -373,8 +435,8 @@
           requestAnimationFrame(frame);
         });
       },
-      resize() { lastW = host.clientWidth; setup(); },
-      destroy() { if (ro) ro.disconnect(); },
+      resize() { lastW = host.clientWidth; lastH = host.clientHeight; setup(); },
+      destroy() { if (ro) ro.disconnect(); cancelAnimationFrame(coastRaf); },
     };
   }
 

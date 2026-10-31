@@ -89,7 +89,13 @@
     const el = document.getElementById("table");
     ui.res = null; ui.round = null;
     if (ui.game === "coin") { ui.pick = ui.pick || "H"; table = FX.Coin(el); }
-    if (ui.game === "roulette") { ui.rbets = (ui.rbets || ["red"]).filter(G.isRouletteBet); ui.hist = ui.hist || []; table = FX.Roulette(el); }
+    if (ui.game === "roulette") { ui.rbets = (ui.rbets || ["red"]).filter(G.isRouletteBet); ui.hist = ui.hist || []; ui.rTab = ui.rTab || "outside";
+      table = FX.Roulette(el, { fitHeight: true, onFlick: (dir, power) => {
+        // A flick is another way to press Spin, with the same checks.
+        const b = document.querySelector('#controls [data-a="rSpin"]');
+        if (!b || b.disabled) { if (!ui.busy) App.toast((ui.rbets || []).length ? `Not enough ${App.labelOf(ui.stakePkg)} time for those bets.` : "Put a bet on the table first."); return false; }
+        ui.flick = { dir, power }; b.click(); return true;
+      } }); }
     if (ui.game === "slots") { table = FX.Slots(el, ["seven", "bell", "cherry"]); paytableSlots(el); }
     if (ui.game === "blackjack") { ui.shoe = ui.shoe && ui.shoe.length > 30 ? ui.shoe : G.newShoe(); table = FX.Blackjack(el); }
     if (ui.game === "poker") {
@@ -125,17 +131,27 @@
     } else if (ui.game === "roulette") {
       const bets = ui.rbets || [], n = bets.length, total = ui.stake * n, dis = locked ? "disabled" : "";
       const on = id => bets.includes(id);
-      const nums = bets.filter(b => b.startsWith("n:")).length;
+      const nums = bets.filter(b => b.startsWith("n:")).length, outs = n - nums;
+      const l = stakeLimit();
       const cell = k => `<button class="rnum ${G.pocketColor(k)}" data-a="rToggle" data-v="n:${k}" aria-pressed="${on("n:" + k)}" aria-label="Number ${k}" ${dis}>${k}</button>`;
-      const spin = n === 0 ? `<p class="muted center">Pick at least one bet.</p>`
-        : canStake(total) || locked ? `<button class="btn primary big" data-a="rSpin" ${ui.busy ? "disabled" : ""}>Spin · ${n} ${n === 1 ? "bet" : "bets"} · ${esc(fmt(total))}</button>`
-        : `<p class="muted center">${n} bets × ${esc(fmt(ui.stake))} is more ${esc(App.labelOf(ui.stakePkg))} time than you have left.</p>`;
-      html = `<div class="history" aria-label="Last numbers">${(ui.hist || []).map(k => `<span class="${G.pocketColor(k)}">${k}</span>`).join("") || `<span class="none">No spins yet</span>`}</div>
-        <div class="bets-head"><span class="eyebrow">Your bets</span><span class="muted">${n ? `${n} on the table · each pays its own` : "Tap to place, tap again to lift"}</span>${n ? `<button class="link" data-a="rClear" ${dis}>Clear</button>` : ""}</div>
-        <div class="bets">${Object.entries(G.ROULETTE_BETS).map(([id, b]) => `<button class="chip bet-${id}" data-a="rToggle" data-v="${id}" aria-pressed="${on(id)}" ${dis}><span>${b.label}</span><span class="pays">${b.multiple}×</span></button>`).join("")}</div>
-        <button class="chip rgrid-toggle" data-a="rGrid" aria-expanded="${!!ui.rGrid}" ${dis}><span>Numbers${nums ? ` · <span class="num">${nums}</span> picked` : ""}</span><span class="pays">${G.STRAIGHT_MULTIPLE}× each</span></button>
-        ${ui.rGrid ? `<div class="rgrid" role="group" aria-label="Single numbers">${cell(0)}${Array.from({ length: 36 }, (_, i) => cell(i + 1)).join("")}</div>` : ""}
-        ${stakeBox(locked).replace('<span class="eyebrow">Stake</span>', '<span class="eyebrow">Stake per bet</span>')}${spin}`;
+      const tab = (id, label, count) => `<button role="tab" class="rtab" data-a="rTab" data-v="${id}" aria-selected="${ui.rTab === id}" ${dis}>${label}${count ? ` <span class="rcount">${count}</span>` : ""}</button>`;
+      const board = ui.rTab === "numbers"
+        ? `<div class="rboard rgrid" role="group" aria-label="Single numbers, ${G.STRAIGHT_MULTIPLE}× each">${cell(0)}${Array.from({ length: 36 }, (_, i) => cell(i + 1)).join("")}</div>`
+        : `<div class="rboard bets" role="group" aria-label="Outside bets">${Object.entries(G.ROULETTE_BETS).map(([id, b]) => `<button class="chip bet-${id}" data-a="rToggle" data-v="${id}" aria-pressed="${on(id)}" ${dis}><span>${b.label}</span><span class="pays">${b.multiple}×</span></button>`).join("")}</div>`;
+      const spin = n === 0 ? `<button class="btn primary big rgo" disabled>Pick a bet</button>`
+        : canStake(total) || locked ? `<button class="btn primary big rgo" data-a="rSpin" ${ui.busy ? "disabled" : ""}><span>Spin ${esc(fmt(total))}</span><small>${n} ${n === 1 ? "bet" : "bets"}</small></button>`
+        : `<button class="btn primary big rgo" disabled><span>Too much</span><small>${esc(fmt(total))} of ${esc(fmt(l ? l.leftSec : 0))}</small></button>`;
+      html = `<div class="rtop"><div class="history" aria-label="Last numbers">${(ui.hist || []).slice(0, 6).map(k => `<span class="${G.pocketColor(k)}">${k}</span>`).join("") || `<span class="none">Flick the wheel or press Spin</span>`}</div>
+          ${l ? `<span class="rfrom">${App.appIcon(l.pkg, "sm")}<span class="num">${esc(fmt(l.leftSec))}</span></span>` : ""}</div>
+        <div class="rtabs" role="tablist" aria-label="Bets">${tab("outside", "Outside", outs)}${tab("numbers", `Numbers <span class="pays">${G.STRAIGHT_MULTIPLE}×</span>`, nums)}
+          <button class="rclear" data-a="rClear" aria-label="Clear all bets" ${n && !locked ? "" : "disabled"}>Clear</button></div>
+        ${board}
+        <div class="rstake-row">
+          <div class="rstake" role="group" aria-label="Stake per bet">
+            <button class="step" data-a="stake" data-d="-60" aria-label="One minute less per bet" ${dis || (ui.stake <= 60 ? "disabled" : "")}>−</button>
+            <output class="rstake-val" id="stake-val" aria-live="polite"><span class="dotnum">${fmt(ui.stake)}</span><small>per bet</small></output>
+            <button class="step" data-a="stake" data-d="60" aria-label="One minute more per bet" ${dis || (!l || (ui.stake + 60) * Math.max(1, n) > l.leftSec ? "disabled" : "")}>+</button>
+          </div>${spin}</div>`;
     } else if (ui.game === "slots") {
       html = `${stakeBox(locked)}${go("Spin for {s}", "sSpin")}`;
     } else if (ui.game === "blackjack") {
@@ -251,12 +267,13 @@
   }
   async function rSpin() {
     const bets = (ui.rbets || []).filter(G.isRouletteBet), per = ui.stake;
+    const flick = ui.flick; ui.flick = null; // set when the wheel was flicked by hand
     if (!bets.length) return;
     const stake = per * bets.length; if (!takeStake(stake, "Roulette")) return;
     await begin();
     const n = G.rouletteSpin();
     let ticks = 0;
-    await table.spin(n, () => { if (++ticks % 2 === 0) App.haptic("tick"); });
+    await table.spin(n, () => { if (++ticks % 2 === 0) App.haptic("tick"); }, flick);
     ui.hist = [n, ...(ui.hist || [])].slice(0, 10);
     const won = bets.filter(b => G.rouletteReturn([b], n) > 0).map(b => b.startsWith("n:") ? b.slice(2) : G.ROULETTE_BETS[b].label);
     const hits = bets.length > 1 && won.length ? `${won.join(", ")} ${won.length === 1 ? "hits" : "hit"}. ` : "";
@@ -410,7 +427,7 @@
       App.chipFx(); App.renderControls();
     },
     rClear() { ui.rbets = []; App.chipFx(); App.renderControls(); },
-    rGrid() { ui.rGrid = !ui.rGrid; App.renderControls(); },
+    rTab(d) { ui.rTab = d.v === "numbers" ? "numbers" : "outside"; App.chipFx(); App.renderControls(); },
     coinFlip: guarded(coinFlip), rSpin: guarded(rSpin), sSpin: guarded(sSpin),
     bjDeal: guarded(bjDeal), bjHit: guarded(bjHit), bjStand: guarded(async () => { if (!ui.busy) await bjSettle(); }),
     bjDouble: guarded(bjDouble), pDeal: guarded(pDeal), pDraw: guarded(pDraw),

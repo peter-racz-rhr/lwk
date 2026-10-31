@@ -349,7 +349,7 @@ a { color: inherit; }
 .game-screen.focus .topbar { opacity: 0; pointer-events: none; }
 .game-screen.focus .result { position: fixed; z-index: 16; top: max(var(--s5), env(safe-area-inset-top, 0px)); left: var(--s4); right: var(--s4); font-size: var(--t-lg); }
 .game-screen.focus .controls { position: fixed; z-index: 16; left: var(--s4); right: var(--s4); margin-inline: auto; bottom: max(var(--s4), env(safe-area-inset-bottom, 0px)); max-width: 448px; background: color-mix(in oklab, var(--surface) 88%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); animation: rise .35s var(--ease) both; }
-.game-screen.focus .controls .stakebox, .game-screen.focus .controls .bets, .game-screen.focus .controls .rgrid, .game-screen.focus .controls .rgrid-toggle, .game-screen.focus .controls .bets-head, .game-screen.focus .controls .seg2, .game-screen.focus .controls .history { display: none; }
+.game-screen.focus .controls .stakebox, .game-screen.focus .controls .bets, .game-screen.focus .controls .rgrid, .game-screen.focus .controls .rtop, .game-screen.focus .controls .rtabs, .game-screen.focus .controls .rstake, .game-screen.focus .controls .rgrid-toggle, .game-screen.focus .controls .bets-head, .game-screen.focus .controls .seg2, .game-screen.focus .controls .history { display: none; }
 .game-screen.focus .wheel-wrap { max-width: min(440px, 92vw); }
 .game-screen.focus .reel { --cell: 92px; }
 .game-screen.focus .cabinet { max-width: 400px; }
@@ -418,6 +418,42 @@ a { color: inherit; }
 .rnum.green { background: var(--zero); grid-column: span 6; }
 .rnum[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--ivory), 0 0 0 2px var(--accent); transform: scale(.94); }
 .rnum:disabled { opacity: .5; }
+
+/* Game screens have their own back button, so the nav bar steps aside and frees the bottom. */
+#app[data-view="game"] .navpill { display: none; }
+.game-screen { padding-bottom: max(var(--s4), env(safe-area-inset-bottom, 0px)); }
+
+/* Roulette fits one screen: the wheel takes whatever height is left, the bet board is fixed. */
+.game-screen[data-game="roulette"] { overflow: hidden; gap: var(--s3); padding-top: var(--s4); }
+.game-screen[data-game="roulette"] .felt { flex: 1 1 0; min-height: 120px; padding: var(--s3); }
+.game-screen[data-game="roulette"] .result { min-height: 22px; font-size: var(--t-sm); margin: -4px 0; }
+.game-screen[data-game="roulette"] .controls { flex: none; gap: var(--s3); padding: var(--s3); }
+.game-screen[data-game="roulette"]:not(.focus) .wheel-wrap { max-width: none; }
+.wheel.grab { cursor: grab; touch-action: none; } .wheel.grabbing { cursor: grabbing; }
+.rtop { display: flex; align-items: center; gap: var(--s2); min-height: 28px; }
+.rtop .history { flex: 1; min-width: 0; }
+.rfrom { display: inline-flex; align-items: center; gap: 6px; font-size: var(--t-sm); color: var(--ivory-2); }
+.rtabs { display: grid; grid-template-columns: 1fr 1fr auto; gap: 4px; padding: 4px; border-radius: var(--r-in); background: var(--bg); box-shadow: inset 0 0 0 1px var(--line); }
+.rtab { height: 36px; border-radius: 12px; font-size: var(--t-sm); font-weight: 650; color: var(--ivory-3); display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: background .2s ease, color .2s ease; }
+.rtab[aria-selected="true"] { background: var(--surface-3); color: var(--ivory); }
+.rcount { min-width: 20px; height: 20px; padding-inline: 5px; border-radius: 10px; background: var(--accent); color: var(--on-accent); font-size: 12px; display: inline-grid; place-items: center; }
+.rclear { padding-inline: var(--s3); font-size: var(--t-sm); font-weight: 600; color: var(--accent); border-radius: 12px; }
+.rclear:disabled { color: var(--ivory-3); opacity: .5; }
+.rboard { height: 176px; }
+.rboard.bets { grid-template-rows: repeat(3, 1fr); }
+.rboard.bets .chip { min-height: 0; }
+.rboard.rgrid { grid-template-columns: repeat(9, 1fr); grid-template-rows: repeat(5, 1fr); gap: 4px; animation: none; }
+.rboard .rnum { height: auto; border-radius: 10px; font-size: var(--t-sm); }
+.rboard .rnum.green { grid-column: 1 / -1; }
+.rstake-row { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--s2); align-items: stretch; }
+.rstake { display: grid; grid-template-columns: 44px 72px 44px; gap: 4px; align-items: stretch; }
+.rstake .step { width: 44px; height: 56px; font-size: 22px; }
+.rstake-val { border-radius: var(--r-in); background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+.rstake-val .dotnum { font-size: 22px; line-height: 1; }
+.rstake-val small { font-size: 10px; color: var(--ivory-3); letter-spacing: .04em; text-transform: uppercase; }
+.rgo { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; line-height: 1.15; padding-inline: var(--s2); min-width: 0; }
+.rgo small { font-size: var(--t-xs); font-weight: 550; opacity: .7; }
+.game-screen.focus .rstake-row { grid-template-columns: 1fr; }
 
 /* ---------- slots ---------- */
 .cabinet { position: relative; width: 100%; max-width: 330px; padding: 18px 14px 14px; border-radius: var(--r-out); background: linear-gradient(180deg, var(--surface-3), var(--surface-2)); box-shadow: inset 0 0 0 1px var(--line-2), inset 0 2px 0 rgba(255, 255, 255, .06), 0 20px 34px -18px rgba(0, 0, 0, .8); transition: max-width .4s var(--ease); }

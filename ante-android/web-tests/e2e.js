@@ -123,20 +123,42 @@ async function noOverflow(p, label) {
   await p.setViewportSize({ width: 390, height: 844 });
   await p.waitForTimeout(250);
   // Several bets at once: black, odd and the number 17.
-  await p.click('[data-a="stakeSet"][data-v="60"]'); // 3 bets × 1:00 always fits after the coin round
+  // Everything fits without scrolling, on a big and a small phone.
+  for (const [w, h] of [[390, 844], [360, 740]]) {
+    await p.setViewportSize({ width: w, height: h }); await p.waitForTimeout(250);
+    const fit = await p.evaluate(() => { const sc = document.getElementById("screen"); return [sc.scrollHeight, sc.clientHeight]; });
+    check(fit[0] <= fit[1] + 1, `roulette fits ${w}×${h} without scrolling (${fit[0]} <= ${fit[1]})`);
+    const vis = await p.evaluate(() => { const r = document.querySelector('#controls .rgo').getBoundingClientRect(); return r.bottom <= innerHeight; });
+    check(vis, `spin button is on screen at ${w}×${h}`);
+  }
+  await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(250);
+  // 3 bets × 1:00 always fits after the coin round.
+  while (await p.$('[data-a="stake"][data-d="-60"]:not([disabled])')) await p.click('[data-a="stake"][data-d="-60"]');
   await p.click('[data-a="rClear"]');
   await p.click('[data-a="rToggle"][data-v="black"]');
   await p.click('[data-a="rToggle"][data-v="odd"]');
-  await p.click('[data-a="rGrid"]');
+  await p.click('[data-a="rTab"][data-v="numbers"]');
   await p.click('[data-a="rToggle"][data-v="n:17"]');
-  check(await p.isVisible("text=Spin · 3 bets"), "three bets show on the spin button");
+  await shot(p, "08c-roulette-numbers");
+  check(await p.isVisible("text=3 bets"), "three bets show on the spin button");
+  await p.click('[data-a="rTab"][data-v="outside"]');
   await p.click('[data-a="rToggle"][data-v="odd"]');
   await p.click('[data-a="rToggle"][data-v="odd"]');
-  check((await p.$$('[data-a="rToggle"][aria-pressed="true"]')).length === 3, "tapping a bet twice lifts it and puts it back");
+  check(await p.evaluate(() => window.App.ui.rbets.slice().sort().join()) === "black,n:17,odd", "tapping a bet twice lifts it and puts it back");
+  check(await p.evaluate(() => document.querySelector('[data-v="numbers"] .rcount').textContent) === "1", "the Numbers tab counts its bets");
   await shot(p, "08b-roulette-bets");
   const per = await p.evaluate(() => window.App.ui.stake);
   before = await leftOf(p, ig);
-  await p.click('[data-a="rSpin"]');
+  {
+    // Spin it by hand: a fast drag round the rim.
+    const wb = await (await p.$(".wheel")).boundingBox();
+    const cx = wb.x + wb.width / 2, cy = wb.y + wb.height / 2, r = wb.width * 0.4;
+    await p.mouse.move(cx + r, cy); await p.mouse.down();
+    for (let k = 1; k <= 6; k++) await p.mouse.move(cx + r * Math.cos(k * 0.35), cy + r * Math.sin(k * 0.35));
+    await p.mouse.up();
+  }
+  await p.waitForTimeout(150);
+  check(await p.evaluate(() => window.App.ui.busy === true), "flicking the wheel by hand spins it");
   await p.waitForTimeout(800);
   check(await p.evaluate(() => document.getElementById("screen").classList.contains("focus")), "the table goes full screen while it spins");
   await p.waitForTimeout(1700);
