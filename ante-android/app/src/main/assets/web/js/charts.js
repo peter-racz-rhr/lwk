@@ -11,10 +11,10 @@
   const OTHER = "other";
 
   /** Builds the series list: apps in limit order first, then any app seen in the data, capped at 5 + Other. */
-  function seriesFor(limits, items, light) {
+  function seriesFor(limits, items, light, nameOf) {
     const order = limits.map(l => ({ key: l.pkg, name: l.label }));
     const seen = new Set(order.map(s => s.key));
-    items.forEach(i => Object.keys(i.parts || {}).forEach(k => { if (!seen.has(k)) { seen.add(k); order.push({ key: k, name: k === "untracked" ? "Before per-app tracking" : k }); } }));
+    items.forEach(i => Object.keys(i.parts || {}).forEach(k => { if (!seen.has(k)) { seen.add(k); order.push({ key: k, name: k === "untracked" ? "Before per-app tracking" : (nameOf ? nameOf(k) : k) }); } }));
     const pal = light ? SERIES_LIGHT : SERIES_DARK;
     const main = order.slice(0, pal.length).map((s, i) => Object.assign({}, s, { color: pal[i] }));
     const rest = order.slice(pal.length).map(s => s.key);

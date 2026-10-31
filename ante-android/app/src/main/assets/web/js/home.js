@@ -33,7 +33,14 @@
     return out;
   }
   /* Old history days have only a total; show that as one neutral segment so nothing disappears. */
-  const withParts = items => items.map(i => (Object.keys(i.parts).length || !i.used ? i : Object.assign({}, i, { parts: { untracked: i.used } })));
+  /* Time recorded before per-app tracking (or any gap) shows as one neutral segment, so bars match totals. */
+  const withParts = items => items.map(i => {
+    const sum = Object.values(i.parts).reduce((a, v) => a + v, 0), gap = i.used - sum;
+    return gap > 0 ? Object.assign({}, i, { parts: Object.assign({}, i.parts, { untracked: gap }) }) : i;
+  });
+  /** Name for an app that may no longer have a limit: its label if known, else the last part of its id. */
+  const nameOf = pkg => { const l = App.labelOf(pkg); if (l !== pkg) return l; const last = pkg.split(".").pop() || pkg; return last.charAt(0).toUpperCase() + last.slice(1); };
+  App.nameOf = nameOf;
   const dayLabel = i => i.date.toLocaleDateString(undefined, { weekday: "short" }).replace(".", "").slice(0, 2);
   const monthLabel = i => i.date.toLocaleDateString(undefined, { month: "short" }).replace(".", "").slice(0, 3);
   const isLight = () => App.P.isLight();
@@ -91,7 +98,7 @@
     const S = App.S, t = todayTotals();
     const total = S.limits.reduce((a, l) => a + l.leftSec, 0);
     const date = new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" });
-    const week = withParts(lastDays(7)), series = App.CH.seriesFor(S.limits, week, isLight());
+    const week = withParts(lastDays(7)), series = App.CH.seriesFor(S.limits, week, isLight(), nameOf);
     const allowed = S.limits.reduce((a, l) => a + l.limitSec, 0);
     const avg = week.reduce((a, d) => a + d.used, 0) / 7;
     const net = t.won - t.lost, bets = todaysBets();
@@ -138,7 +145,7 @@
   App.views.screentime = function () {
     const range = App.ui.range || "week";
     const items = withParts(range === "week" ? lastDays(7) : lastMonths(6));
-    const series = App.CH.seriesFor(App.S.limits, items, isLight());
+    const series = App.CH.seriesFor(App.S.limits, items, isLight(), nameOf);
     const total = items.reduce((a, i) => a + i.used, 0);
     const span = lastDays(183), first = span.findIndex(d => d.used > 0);
     const days = range === "week" ? 7 : Math.max(1, first < 0 ? 1 : span.length - first);
@@ -162,7 +169,8 @@
     const days30 = lastDays(30);
     const tr = App.CH.trend(days30.map(d => d.won - d.lost), { label: "Net minutes over the last 30 days" });
     const won30 = days30.reduce((a, d) => a + d.won, 0), lost30 = days30.reduce((a, d) => a + d.lost, 0);
-    const recent = App.S.ledger.slice(0, 12).map(b => {
+    const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
+    const recent = App.S.ledger.filter(b => b.atMs >= startOfDay.getTime()).slice(0, 12).map(b => {
       const t = new Date(b.atMs), g = App.G.GAMES.find(x => x.name === b.game);
       return `<div class="txn"><span class="txn-ic" aria-hidden="true">${g ? App.FX.GAME_ICON(g.id) : App.ICON.play}</span>
         <span class="txn-m"><b>${esc(b.game)}</b><span class="muted">${esc(App.labelOf(b.pkg))}</span></span>

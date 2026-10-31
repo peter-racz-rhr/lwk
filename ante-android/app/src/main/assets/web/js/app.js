@@ -235,6 +235,9 @@
       if (msg) msg.textContent = r && r.error === "cancelled" ? "" : text; else App.toast(text);
     }
   };
+  /** The phone had no app for a link (no browser or mail app); show the address instead. */
+  window.anteLinkFailed = url => App.toast(String(url).replace(/^mailto:/, ""));
+
   window.anteRefresh = function () {
     if (App.BLOCK && ui.view === "block") App.startBreath();
     if (ui.busy || ui.round) return;

@@ -222,7 +222,7 @@
       cv.style.width = cv.style.height = w + "px";
       cv.width = cv.height = Math.round(w * dpr);
       stator = drawStator(); rotor = drawRotor();
-      ballR = R * 0.85;
+      ballR = highlight >= 0 ? R * 0.655 : R * 0.85; // keep a landed ball in its pocket across resizes
       draw();
     }
     function off() { const c = document.createElement("canvas"); c.width = c.height = Math.round(size * dpr); const x = c.getContext("2d"); x.scale(dpr, dpr); x.translate(R, R); return [c, x]; }

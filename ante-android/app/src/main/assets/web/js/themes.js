@@ -26,11 +26,15 @@
   if (!FLAVORS[prefs.theme]) prefs.theme = "neutral";
   if (!ACCENTS[prefs.theme][prefs.accent]) prefs.accent = DEFAULT_ACCENT[prefs.theme];
 
-  /** Text colour that reads on the accent: dark ink on light accents, light on dark ones. */
+  /** Text colour for the accent: whichever of dark ink or white has the higher WCAG contrast. */
+  function luminance(hex) {
+    const n = parseInt(hex.slice(1), 16);
+    const lin = c => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+    return 0.2126 * lin(n >> 16) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255);
+  }
   function onColor(hex) {
-    const n = parseInt(hex.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
-    const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
-    return lum > 0.6 ? "#11111b" : "#ffffff";
+    const L = luminance(hex), dark = (L + 0.05) / (luminance("#11111b") + 0.05), light = 1.05 / (L + 0.05);
+    return dark >= light ? "#11111b" : "#ffffff";
   }
 
   function apply() {

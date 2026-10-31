@@ -164,6 +164,7 @@
     App.$app.classList.add("focusing");
     const last = felt.getBoundingClientRect();
     if (!FX.reduced()) {
+      felt.style.transformOrigin = "0 0"; // FLIP deltas are measured from the top-left corner
       felt.animate([
         { transform: `translate(${first.left - last.left}px, ${first.top - last.top}px) scale(${first.width / last.width}, ${first.height / last.height})`, borderRadius: "24px" },
         { transform: "none", borderRadius: "0px" },
@@ -182,6 +183,7 @@
       App.$app.classList.remove("focusing");
       const last = felt.getBoundingClientRect();
       if (!FX.reduced()) {
+        felt.style.transformOrigin = "0 0";
         felt.animate([
           { transform: `translate(${first.left - last.left}px, ${first.top - last.top}px) scale(${first.width / last.width}, ${first.height / last.height})`, borderRadius: "0px" },
           { transform: "none", borderRadius: "24px" },

@@ -52,7 +52,6 @@ class AnteBridge(
         return o.toString()
     }
 
-    /** Installed apps without icons (fast); the page fetches icons one by one with [icon]. */
     /** Opens one of a fixed set of outside links (Ko-fi, the contact email) in the right app. */
     @JavascriptInterface
     fun openLink(url: String): Boolean {
@@ -61,7 +60,8 @@ class AnteBridge(
             try {
                 activity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             } catch (e: Exception) {
-                // No browser or mail app; the page also shows the address as text.
+                // No browser or mail app: let the page show the address instead.
+                webView.evaluateJavascript("window.anteLinkFailed && window.anteLinkFailed(" + JSONObject.quote(url) + ")", null)
             }
         }
         return true
@@ -100,6 +100,7 @@ class AnteBridge(
     @JavascriptInterface
     fun finishOnboarding() = Account.setOnboarded(ctx)
 
+    /** Installed apps without icons (fast); the page fetches icons one by one with [icon]. */
     @JavascriptInterface
     fun apps(): String = AppCatalog.launchableApps(ctx).toString()
 
