@@ -1,5 +1,8 @@
 package com.ante.app.core
 
+import java.time.Instant
+import java.time.ZoneId
+
 /**
  * All of Ante's time accounting. Pure Kotlin so it can be unit tested on the JVM.
  * Not thread safe: callers (see [com.ante.app.Bank]) synchronize access.
@@ -23,6 +26,36 @@ class TimeBank(initial: BankState = BankState()) {
         )
         openStakes.clear()
         return true
+    }
+
+    /**
+     * Resets the day when trusted time has crossed local midnight. A reset also needs at least
+     * 23 hours since the current day began (the shortest day, with daylight saving), so hopping
+     * time zones can't bring tomorrow's budget early.
+     */
+    fun rolloverIfDue(nowMs: Long, zone: ZoneId): Boolean {
+        val date = Instant.ofEpochMilli(nowMs).atZone(zone).toLocalDate()
+        val today = date.toString()
+        if (today == state.day) return false
+        if (state.dayStartMs != 0L && nowMs < state.dayStartMs + MIN_DAY_MS) return false
+        rollover(today)
+        state = state.copy(dayStartMs = date.atStartOfDay(zone).toInstant().toEpochMilli())
+        return true
+    }
+
+    fun setStrict(on: Boolean) {
+        state = state.copy(strict = on, settingsPassUntilMs = if (on) state.settingsPassUntilMs else 0)
+    }
+
+    /** Opens Settings for a short while in strict mode, after the user waited it out. */
+    fun grantSettingsPass(nowMs: Long) {
+        state = state.copy(settingsPassUntilMs = nowMs + SETTINGS_PASS_MS)
+    }
+
+    fun isGuardActive(nowMs: Long): Boolean = state.strict && nowMs >= state.settingsPassUntilMs
+
+    fun setClock(anchor: ClockAnchor) {
+        if (anchor != state.clock) state = state.copy(clock = anchor)
     }
 
     fun limitFor(pkg: String): Limit? = state.limits.firstOrNull { it.pkg == pkg }
@@ -151,6 +184,8 @@ class TimeBank(initial: BankState = BankState()) {
         const val MAX_LIMIT_SEC = 24 * 60 * 60
         const val MAX_RETURN_MULTIPLE = 100
         const val LEDGER_MAX = 50
+        const val MIN_DAY_MS = 23L * 60 * 60 * 1000
+        const val SETTINGS_PASS_MS = 2L * 60 * 1000
 
         /** Returned by [settleBet] when there is no matching open stake. */
         const val INVALID_SETTLE = Int.MIN_VALUE

@@ -12,27 +12,29 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import android.view.accessibility.AccessibilityEvent
-import com.ante.app.core.Decision
+import com.ante.app.core.Watcher
 
 /**
- * Watches which app is in front. Only window-state changes are requested, and no window content
- * is read (see res/xml/accessibility_config.xml).
+ * Watches which app is in front and covers limited apps. Only window-state changes are requested,
+ * and no window content is read (see res/xml/accessibility_config.xml). The rules live in
+ * [Watcher], which is stress tested on the JVM.
  */
 class AppWatcherService : AccessibilityService() {
     private val handler = Handler(Looper.getMainLooper())
-    private val expiryCheck = Runnable { checkExpiry() }
-    private var foreground: String? = null
+    private val expiryCheck = Runnable { onTick() }
+    private lateinit var watcher: Watcher
     private var homePackages: Set<String> = emptySet()
 
     /** Handler delays pause in deep sleep, so re-check the session whenever the screen comes back. */
     private val wakeReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) = checkExpiry()
+        override fun onReceive(context: Context?, intent: Intent?) = onTick()
     }
     private var receiverRegistered = false
 
     override fun onServiceConnected() {
         super.onServiceConnected()
         Bank.init(this)
+        watcher = Watcher(packageName, GUARDED)
         instance = this
         homePackages = findHomePackages()
         val filter = IntentFilter().apply {
@@ -41,25 +43,22 @@ class AppWatcherService : AccessibilityService() {
             addAction(Intent.ACTION_TIME_CHANGED)
             addAction(Intent.ACTION_TIMEZONE_CHANGED)
         }
-        if (Build.VERSION.SDK_INT >= 33) registerReceiver(wakeReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
-        else registerReceiver(wakeReceiver, filter)
-        receiverRegistered = true
+        register(filter)
         scheduleExpiry()
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        if (event?.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
-        // Any window change is a chance to catch a session that ran out while the timer slept.
-        if (Bank.read { it.state.session } != null) checkExpiry()
-        val pkg = event.packageName?.toString() ?: return
-        if (pkg in IGNORED || pkg == currentKeyboard()) return
-        if (!isActivityWindow(pkg, event.className?.toString())) return
-        if (pkg == foreground && pkg != packageName) return // same app, new screen inside it
-        foreground = pkg
-
-        val isHome = pkg in homePackages
-        val decision = Bank.edit { it.onForeground(pkg, System.currentTimeMillis(), isHome) }
-        if (decision == Decision.BLOCK && pkg != packageName) BlockActivity.show(this, pkg, null)
+        if (event?.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED || !::watcher.isInitialized) return
+        lastEventAt = System.currentTimeMillis()
+        val pkg = event.packageName?.toString()
+        if (pkg == null) {
+            onTick()
+            return
+        }
+        val ignored = pkg in IGNORED || pkg == currentKeyboard()
+        val isActivity = !ignored && isActivityWindow(pkg, event.className?.toString())
+        val action = Bank.editAt { bank, now -> watcher.onWindow(bank, pkg, isActivity, ignored, pkg in homePackages, now) }
+        act(action)
         scheduleExpiry()
     }
 
@@ -75,8 +74,40 @@ class AppWatcherService : AccessibilityService() {
         super.onDestroy()
     }
 
+    /** Wakes up when the current session's time is up. */
+    fun scheduleExpiry() {
+        handler.post {
+            handler.removeCallbacks(expiryCheck)
+            val session = Bank.read { it.state.session } ?: return@post
+            val delay = (session.endsAtMs - Bank.now()).coerceAtLeast(0) + 250
+            handler.postDelayed(expiryCheck, delay)
+        }
+    }
+
+    private fun onTick() {
+        if (!::watcher.isInitialized) return
+        act(Bank.editAt { bank, now -> watcher.onTimer(bank, now) })
+        scheduleExpiry()
+    }
+
+    /**
+     * Covers the app. Going home first also ends split-screen and keeps the blocked app out of
+     * the visible task, so the block screen can't sit beside it.
+     */
+    private fun act(action: Watcher.Action) {
+        if (action !is Watcher.Action.Block) return
+        performGlobalAction(GLOBAL_ACTION_HOME)
+        handler.postDelayed({ BlockActivity.show(this, action.pkg, action.note) }, BLOCK_DELAY_MS)
+    }
+
+    private fun register(filter: IntentFilter) {
+        if (Build.VERSION.SDK_INT >= 33) registerReceiver(wakeReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        else registerReceiver(wakeReceiver, filter)
+        receiverRegistered = true
+    }
+
     private fun shutdown() {
-        handler.removeCallbacks(expiryCheck)
+        handler.removeCallbacksAndMessages(null)
         if (receiverRegistered) {
             try { unregisterReceiver(wakeReceiver) } catch (e: IllegalArgumentException) { /* already gone */ }
             receiverRegistered = false
@@ -88,24 +119,6 @@ class AppWatcherService : AccessibilityService() {
         val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
         @Suppress("DEPRECATION")
         return packageManager.queryIntentActivities(intent, 0).mapNotNull { it.activityInfo?.packageName }.toSet()
-    }
-
-    /** Wakes up when the current session's time is up. */
-    fun scheduleExpiry() {
-        handler.post {
-            handler.removeCallbacks(expiryCheck)
-            val session = Bank.read { it.state.session } ?: return@post
-            val delay = (session.endsAtMs - System.currentTimeMillis()).coerceAtLeast(0) + 250
-            handler.postDelayed(expiryCheck, delay)
-        }
-    }
-
-    private fun checkExpiry() {
-        val expired = Bank.edit { it.expireSession(System.currentTimeMillis()) }
-        if (expired != null && expired == foreground) {
-            BlockActivity.show(this, expired, "Session over.")
-        }
-        scheduleExpiry()
     }
 
     /** Dialogs, toasts and keyboards also fire window events; only real activities count. */
@@ -126,10 +139,24 @@ class AppWatcherService : AccessibilityService() {
             ?.substringBefore('/')
 
     companion object {
+        private const val BLOCK_DELAY_MS = 120L
+        private val IGNORED = setOf("com.android.systemui", "android")
+
+        /** Covered in strict mode: where the watcher could be switched off or Ante uninstalled. */
+        private val GUARDED = setOf(
+            "com.android.settings",
+            "com.google.android.packageinstaller",
+            "com.android.packageinstaller",
+            "com.samsung.android.packageinstaller",
+        )
+
         @Volatile
         var instance: AppWatcherService? = null
             private set
 
-        private val IGNORED = setOf("com.android.systemui", "android")
+        /** Wall time of the last window event, shown in Ante as proof the watcher is alive. */
+        @Volatile
+        var lastEventAt: Long = 0
+            private set
     }
 }

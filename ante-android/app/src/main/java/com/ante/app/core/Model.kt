@@ -32,6 +32,13 @@ data class BankState(
     val session: Session? = null,
     /** Time left on limits removed today, so removing and re-adding a limit can't refill it. */
     val parked: Map<String, Int> = emptyMap(),
+    /** Local midnight (epoch ms) of [day]; the next reset can't come sooner than 23 h after it. */
+    val dayStartMs: Long = 0,
+    val clock: ClockAnchor = ClockAnchor(),
+    /** Strict mode: Settings and the uninstall screen are covered too, behind a wait. */
+    val strict: Boolean = false,
+    /** Until when Settings may be used despite strict mode. */
+    val settingsPassUntilMs: Long = 0,
 )
 
 enum class Decision { ALLOW, BLOCK }

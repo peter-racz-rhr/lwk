@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Lets Ante ask to be exempt from battery optimization, so OEM battery savers don't kill the watcher. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
     <!-- Package visibility (Android 11+): list launchable apps for the limit picker, and see the home screen. -->
     <queries>
         <intent>

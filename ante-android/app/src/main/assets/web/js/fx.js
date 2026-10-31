@@ -7,6 +7,7 @@
   const wait = ms => new Promise(r => setTimeout(r, reduced() ? Math.min(ms, 30) : ms));
   const dur = ms => (reduced() ? 1 : ms);
   const finished = a => (a && a.finished ? a.finished.catch(() => {}) : Promise.resolve());
+  const sfx = name => { if (window.AnteSFX) window.AnteSFX.play(name); };
 
   /* ---------- artwork ---------- */
   const SUIT_PATH = {
@@ -134,6 +135,7 @@
       cardEl.setAttribute("aria-label", tmp.firstElementChild.dataset.name);
     }
     void cardEl.offsetWidth;
+    sfx("flip");
     cardEl.classList.add("up");
     await wait(420);
   }
@@ -147,6 +149,7 @@
   async function deal(row, card, faceUp, from, haptic) {
     const el = addCard(row, null);
     if (haptic) haptic("tap");
+    sfx("deal");
     await flyIn(el, from);
     if (faceUp) await flip(el, card);
     return el;
@@ -164,6 +167,8 @@
         const base = Math.ceil(angle / 360) * 360;
         const end = base + turns * 360 + (result === "T" ? 180 : 0);
         const d = dur(1500);
+        sfx("coinToss");
+        setTimeout(() => sfx("coinLand"), d * 0.85);
         const a1 = toss.animate([{ transform: "translateY(0)" }, { transform: "translateY(-150px)", offset: 0.45 }, { transform: "translateY(0)", offset: 0.85 }, { transform: "translateY(-14px)", offset: 0.93 }, { transform: "translateY(0)" }], { duration: d, easing: "ease-in-out" });
         const a2 = coin.animate([{ transform: `rotateX(${angle}deg)` }, { transform: `rotateX(${end}deg)` }], { duration: d * 0.88, easing: "cubic-bezier(.25,.6,.3,1)", fill: "forwards" });
         const a3 = shadow.animate([{ transform: "scale(1)", opacity: 0.55 }, { transform: "scale(.45)", opacity: 0.2, offset: 0.45 }, { transform: "scale(1)", opacity: 0.55, offset: 0.85 }, { transform: "scale(1)", opacity: 0.55 }], { duration: d });
@@ -299,7 +304,8 @@
         let B = b0 - pocketScreen;
         while (B < Math.PI * 2 * 8) B += Math.PI * 2; // ball travels 8+ turns the other way
         const rim = R * 0.85, pocket = R * 0.655;
-        let lastPocket = -1;
+        let lastPocket = -1, dropped = false;
+        sfx("wheelSpin");
         return new Promise(resolve => {
           const t0 = performance.now();
           function frame(now) {
@@ -317,7 +323,9 @@
             ballA = free + (locked - free) * s;
             if (onTick && t > 0.55) {
               const rel = Math.round(((((ballA - wheelA + Math.PI / 2) / STEP) % N) + N) % N);
-              if (rel !== lastPocket) { lastPocket = rel; if (t < 0.85) onTick(); }
+              if (rel !== lastPocket) { lastPocket = rel; if (t < 0.85) { onTick(); sfx("ballTick"); } }
+            }
+            if (!dropped && t >= 0.8) { dropped = true; sfx("ballDrop");
             }
             draw();
             if (t < 1) requestAnimationFrame(frame);
@@ -344,6 +352,7 @@
     return {
       async spin(final, onStop) {
         host.querySelector(".cabinet").classList.remove("hit");
+        if (window.AnteSFX) window.AnteSFX.reelStart();
         const cellH = reels[0].querySelector(".cell").getBoundingClientRect().height || 72;
         const jobs = reels.map(async (reel, i) => {
           const strip = reel.querySelector(".strip");
@@ -365,6 +374,8 @@
           strip.innerHTML = keep.map(c => `<div class="cell">${c}</div>`).join("");
           a.cancel();
           strip.style.transform = "translateY(0)";
+          sfx("reelStop");
+          if (i === reels.length - 1 && window.AnteSFX) window.AnteSFX.reelStop();
           if (onStop) onStop(i);
         });
         await Promise.all(jobs);
@@ -428,6 +439,7 @@
         for (let i = 0; i < 5; i++) {
           const el = slots[i].querySelector(".card");
           if (haptic) haptic("tap");
+          sfx("deal");
           await flyIn(el, deck);
         }
         await Promise.all(hand.map((c, i) => wait(i * 70).then(() => flip(slots[i].querySelector(".card"), c))));
@@ -446,6 +458,7 @@
           if (held[i]) continue;
           const el = place(i, null, false);
           if (haptic) haptic("tap");
+          sfx("deal");
           await flyIn(el, deck);
           await flip(el, hand[i]);
         }

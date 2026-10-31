@@ -28,8 +28,14 @@ class AnteBridge(
     @JavascriptInterface
     fun state(): String {
         val json = Bank.read { Codec.toJson(it.state) }
-        json.put("now", System.currentTimeMillis())
+        json.put("now", Bank.now())
         json.put("accessibility", isWatcherEnabled())
+        // Health checks shown on Today: is the watcher really running, can the clock be trusted,
+        // and is Android allowed to kill Ante to save battery.
+        json.put("watching", AppWatcherService.instance != null)
+        json.put("autoTime", Bank.autoTimeOn())
+        json.put("batteryOk", isIgnoringBatteryOptimizations())
+        json.put("lastEventAt", AppWatcherService.lastEventAt)
         return json.toString()
     }
 
@@ -74,7 +80,7 @@ class AnteBridge(
     @JavascriptInterface
     fun settle(pkg: String, game: String, stakeSec: Int, returnSec: Int): Int {
         if (!validPkg(pkg)) return 0
-        return Bank.edit { it.settleBet(pkg, game, stakeSec, returnSec, System.currentTimeMillis()) }
+        return Bank.editAt { b, now -> b.settleBet(pkg, game, stakeSec, returnSec, now) }
     }
 
     /** Reserves time and opens the app. */
@@ -82,7 +88,7 @@ class AnteBridge(
     fun open(pkg: String, seconds: Int): Boolean {
         if (!validPkg(pkg)) return false
         val launch = ctx.packageManager.getLaunchIntentForPackage(pkg) ?: return false
-        val ok = Bank.edit { it.startSession(pkg, seconds, System.currentTimeMillis()) }
+        val ok = Bank.editAt { b, now -> b.startSession(pkg, seconds, now) }
         if (!ok) return false
         AppWatcherService.instance?.scheduleExpiry()
         activity.runOnUiThread {
@@ -92,7 +98,7 @@ class AnteBridge(
                 if (activity is BlockActivity) activity.finish()
             } catch (e: Exception) {
                 // App vanished between the check and the launch: give the reserved time back.
-                Bank.edit { it.endSession(System.currentTimeMillis()) }
+                Bank.editAt { b, now -> b.endSession(now) }
                 webView.evaluateJavascript("window.anteRefresh && window.anteRefresh()", null)
             }
         }
@@ -117,22 +123,70 @@ class AnteBridge(
         }
     }
 
+    /* ---- Strict mode. Leaving it, or opening Settings while it is on, needs a 30 s wait that
+       the native side times, so the page can't skip it. ---- */
+
     @JavascriptInterface
-    fun openAccessibilitySettings() {
-        activity.runOnUiThread {
-            activity.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-        }
+    fun startWait() { waitStartedAt = Bank.now() }
+
+    @JavascriptInterface
+    fun waitLeftMs(): Long = (waitStartedAt + WAIT_MS - Bank.now()).coerceAtLeast(0)
+
+    private fun waitDone(): Boolean {
+        val since = Bank.now() - waitStartedAt
+        return waitStartedAt > 0 && since in WAIT_MS..WAIT_VALID_MS
     }
+
+    @JavascriptInterface
+    fun setStrict(on: Boolean): Boolean {
+        if (!on && Bank.read { it.state.strict } && !waitDone()) return false
+        Bank.edit { it.setStrict(on) }
+        waitStartedAt = 0
+        return true
+    }
+
+    /** From a strict-mode block screen: open Settings for two minutes after the wait. */
+    @JavascriptInterface
+    fun openGuarded(pkg: String): Boolean {
+        if (!validPkg(pkg) || !waitDone()) return false
+        Bank.editAt { b, now -> b.grantSettingsPass(now) }
+        waitStartedAt = 0
+        val launch = ctx.packageManager.getLaunchIntentForPackage(pkg)
+        activity.runOnUiThread {
+            if (launch != null) activity.startActivity(launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            if (activity is BlockActivity) activity.finish()
+        }
+        return true
+    }
+
+    /** Settings shortcuts from Ante. In strict mode they need the wait too, then open a pass. */
+    private fun openSettings(intent: Intent): Boolean {
+        if (Bank.read { it.state.strict }) {
+            if (!waitDone()) return false
+            Bank.editAt { b, now -> b.grantSettingsPass(now) }
+            waitStartedAt = 0
+        }
+        activity.runOnUiThread {
+            try { activity.startActivity(intent) } catch (e: Exception) { activity.startActivity(Intent(Settings.ACTION_SETTINGS)) }
+        }
+        return true
+    }
+
+    @JavascriptInterface
+    fun openAccessibilitySettings(): Boolean = openSettings(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
 
     /** App info page, where Android 13+ hides "Allow restricted settings" for sideloaded apps. */
     @JavascriptInterface
-    fun openAppInfo() {
-        activity.runOnUiThread {
-            activity.startActivity(
-                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", ctx.packageName, null))
-            )
-        }
-    }
+    fun openAppInfo(): Boolean =
+        openSettings(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", ctx.packageName, null)))
+
+    /** Asks Android to stop putting Ante to sleep, which on some phones also stops the watcher. */
+    @JavascriptInterface
+    fun openBatterySettings(): Boolean =
+        openSettings(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:" + ctx.packageName)))
+
+    @JavascriptInterface
+    fun openDateSettings(): Boolean = openSettings(Intent(Settings.ACTION_DATE_SETTINGS))
 
     @JavascriptInterface
     fun haptic(kind: String) {
@@ -145,6 +199,11 @@ class AnteBridge(
         webView.post { webView.performHapticFeedback(constant) }
     }
 
+    private fun isIgnoringBatteryOptimizations(): Boolean {
+        val pm = ctx.getSystemService(android.content.Context.POWER_SERVICE) as? android.os.PowerManager ?: return true
+        return pm.isIgnoringBatteryOptimizations(ctx.packageName)
+    }
+
     private fun isWatcherEnabled(): Boolean {
         val enabled = Settings.Secure.getString(ctx.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES) ?: return false
         val me = ComponentName(ctx, AppWatcherService::class.java)
@@ -154,6 +213,13 @@ class AnteBridge(
     private fun validPkg(pkg: String?): Boolean = isValidPackage(pkg)
 
     companion object {
+        private const val WAIT_MS = 30_000L
+        private const val WAIT_VALID_MS = 10 * 60_000L
+
+        /** Shared by every page, so the wait can't be restarted from a second screen. */
+        @Volatile
+        private var waitStartedAt = 0L
+
         private val PKG = Regex("^[A-Za-z0-9_]+(\\.[A-Za-z0-9_]+)*$")
 
         fun isValidPackage(pkg: String?): Boolean = pkg != null && pkg.length in 1..255 && PKG.matches(pkg)

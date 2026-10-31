@@ -24,6 +24,12 @@
       openAccessibilitySettings: () => N.openAccessibilitySettings(),
       openAppInfo: () => N.openAppInfo(),
       haptic: kind => { try { N.haptic(kind); } catch (e) { /* older bridge */ } },
+      startWait: () => N.startWait(),
+      waitLeftMs: () => Number(N.waitLeftMs()),
+      setStrict: on => N.setStrict(!!on),
+      openGuarded: pkg => N.openGuarded(pkg),
+      openBatterySettings: () => N.openBatterySettings(),
+      openDateSettings: () => N.openDateSettings(),
     };
     return;
   }
@@ -61,6 +67,7 @@
       ],
       session: null,
       parked: {},
+      strict: false,
     };
   }
   let S;
@@ -72,12 +79,14 @@
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* private mode */ } };
   const lim = pkg => S.limits.find(l => l.pkg === pkg);
   const ctx = { mode: q.get("mode") === "block" ? "block" : "main", pkg: q.get("pkg") || null, note: q.get("note") || null };
+  const WAIT = q.get("wait") === "1" ? 1000 : 30000;
+  let waitStart = 0;
   const say = msg => window.dispatchEvent(new CustomEvent("ante-mock", { detail: msg }));
 
   window.Ante = {
     native: false,
     resetMock: () => { S = fresh(); save(); },
-    state: () => JSON.parse(JSON.stringify(Object.assign({}, S, { now: Date.now() }))),
+    state: () => JSON.parse(JSON.stringify(Object.assign({ watching: true, autoTime: true, batteryOk: q.get("battery") !== "0" }, S, { now: Date.now() }))),
     context: () => {
       if (ctx.mode !== "block" || !ctx.pkg) return { mode: ctx.mode, platform: "browser" };
       const a = apps.find(x => x.pkg === ctx.pkg);
@@ -124,8 +133,21 @@
     },
     closeBlock: () => say("Goes to the home screen"),
     openAnte: () => say("Opens Ante"),
-    openAccessibilitySettings: () => { S.accessibility = true; save(); say("Opens Accessibility settings (mock: switched on)"); },
-    openAppInfo: () => say("Opens Ante's App info page"),
+    openAccessibilitySettings: () => {
+      if (S.strict && !(waitStart && Date.now() - waitStart >= WAIT)) return false;
+      waitStart = 0; S.accessibility = true; save(); say("Opens Accessibility settings (mock: switched on)"); return true;
+    },
+    openAppInfo: () => { say("Opens Ante's App info page"); return true; },
     haptic: () => {},
+    // Strict mode. ?wait=1 shortens the 30 s wait to 1 s for tests.
+    startWait: () => { waitStart = Date.now(); },
+    waitLeftMs: () => Math.max(0, waitStart + WAIT - Date.now()),
+    setStrict(on) {
+      if (!on && S.strict && !(waitStart && Date.now() - waitStart >= WAIT)) return false;
+      S.strict = !!on; waitStart = 0; save(); return true;
+    },
+    openGuarded(pkg) { if (!(waitStart && Date.now() - waitStart >= WAIT)) return false; waitStart = 0; say("Opens Settings for 2 minutes"); return true; },
+    openBatterySettings: () => { say("Opens battery optimization"); S.batteryOk = true; save(); return true; },
+    openDateSettings: () => { say("Opens Date & time"); return true; },
   };
 })();

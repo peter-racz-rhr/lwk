@@ -12,6 +12,8 @@ class CodecTest {
             ledger = listOf(Bet("Roulette", "com.a", -300, 1730000000000)),
             session = Session("com.a", 1730000000000, 300),
             parked = mapOf("com.b" to 120),
+            dayStartMs = 1729980000000,
+            clock = ClockAnchor(1730000000000, 123456, 1730000000500),
         )
         assertEquals(state, Codec.decode(Codec.encode(state)))
     }

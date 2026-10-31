@@ -161,8 +161,10 @@ async function noOverflow(p, label) {
   check(await p.evaluate(() => window.anteBack()) === false, "back on Today lets the activity close");
 
   /* Block screen */
-  const b = await page(browser, "?mode=block&pkg=" + ig + "&acc=1");
+  const b = await page(browser, "?mode=block&pkg=" + ig + "&acc=1&breath=2");
+  check(await b.isDisabled("#open-app"), "open button waits for a breath first");
   await shot(b, "18-block");
+  await b.waitForSelector("#open-app:not([disabled])", { timeout: 4000 });
   check(await b.isVisible("text=Play for more time"), "block screen offers play");
   await b.click('[data-a="pickOpen"][data-v="600"]');
   check((await b.textContent('[data-a="openApp"]')).includes("10:00"), "open button follows the chosen time");
@@ -181,6 +183,53 @@ async function noOverflow(p, label) {
   await z.waitForTimeout(200);
   check(await z.isVisible("text=is done for today"), "empty budget shows the done-for-today state");
   await shot(z, "20-block-empty");
+
+  /* Sounds: every effect plays without errors, mute is remembered */
+  const snd = await page(browser, "?acc=1&reset=1");
+  await snd.click('[data-t="tables"]');
+  const names = await snd.evaluate(() => window.AnteSFX.names);
+  check(names.length >= 14, `sound bank has ${names.length} effects`);
+  await snd.click('[data-a="game"][data-id="slots"]');
+  await snd.evaluate(() => { window.AnteSFX.names.forEach(n => window.AnteSFX.play(n)); window.AnteSFX.reelStart(); window.AnteSFX.reelStop(); });
+  await snd.click('[data-a="sSpin"]');
+  await snd.waitForSelector('[data-a="sSpin"]:not([disabled])', { timeout: 6000 });
+  check(await snd.evaluate(() => !window.AnteSFX.muted), "sound starts on");
+  await snd.click('[data-a="sound"]');
+  check(await snd.evaluate(() => window.AnteSFX.muted), "sound button mutes");
+  await snd.reload(); await snd.waitForSelector(".screen");
+  check(await snd.evaluate(() => window.AnteSFX.muted), "mute survives a reload");
+  await snd.evaluate(() => window.AnteSFX.toggle());
+  check(snd.errors.length === 0, "no console errors from audio: " + snd.errors.join(" | "));
+
+  /* Health tips + strict mode */
+  const st = await page(browser, "?acc=1&wait=1&battery=0&reset=1");
+  check(await st.isVisible("text=Blocking is on"), "status shows blocking is on");
+  check(await st.isVisible("text=Keep Ante awake"), "battery tip shows when Ante may be put to sleep");
+  await st.click('[data-a="strictOn"]');
+  await st.click('[data-a="agreeStrict"]');
+  await st.waitForTimeout(150);
+  check(await st.isVisible("text=Blocking is on · Strict mode"), "strict mode turns on");
+  await shot(st, "23-strict-on");
+  await st.click('[data-a="strictOff"]');
+  check(await st.isDisabled("#wait-go"), "turning strict off starts disabled behind a wait");
+  check(await st.evaluate(() => window.Ante.setStrict(false)) === false, "bridge refuses to leave strict mode before the wait ends");
+  await shot(st, "24-strict-wait");
+  await st.waitForSelector("#wait-go:not([disabled])", { timeout: 3000 });
+  await st.click("#wait-go");
+  await st.waitForTimeout(150);
+  check(!(await st.isVisible("text=Blocking is on · Strict mode")), "strict mode turns off after the wait");
+  check(st.errors.length === 0, "no console errors in strict flow: " + st.errors.join(" | "));
+
+  const gs = await page(browser, "?mode=block&pkg=com.android.settings&note=strict&acc=1&wait=1");
+  check(await gs.isVisible("text=Settings is locked"), "strict mode covers Settings");
+  await shot(gs, "25-guard-settings");
+  await gs.click('[data-a="guardWait"]');
+  check(await gs.evaluate(() => window.Ante.openGuarded("com.android.settings")) === false, "Settings stays shut before the wait ends");
+  await gs.waitForSelector("#wait-go:not([disabled])", { timeout: 3000 });
+  await gs.click("#wait-go");
+  const gi = await page(browser, "?mode=block&pkg=com.google.android.packageinstaller&note=strict&acc=1");
+  check(await gi.isVisible("text=Uninstalling is locked"), "strict mode covers the uninstaller");
+  check(gs.errors.length + gi.errors.length === 0, "no console errors on guard screens");
 
   /* Small phone + reduced motion */
   const s = await page(browser, "?acc=1", { width: 340, reduced: true });

@@ -20,6 +20,10 @@ object Codec {
             }
         })
         put("parked", JSONObject().apply { s.parked.forEach { (k, v) -> put(k, v) } })
+        put("dayStartMs", s.dayStartMs)
+        put("strict", s.strict)
+        put("settingsPassUntilMs", s.settingsPassUntilMs)
+        put("clock", JSONObject().put("wallMs", s.clock.wallMs).put("elapsedMs", s.clock.elapsedMs).put("lastTrustedMs", s.clock.lastTrustedMs))
         val session = s.session
         if (session != null) {
             put("session", JSONObject().put("pkg", session.pkg).put("startedAtMs", session.startedAtMs).put("grantedSec", session.grantedSec))
@@ -47,6 +51,12 @@ object Codec {
                 parked = o.optJSONObject("parked")?.let { j ->
                     j.keys().asSequence().associateWith { j.optInt(it, 0) }
                 } ?: emptyMap(),
+                dayStartMs = o.optLong("dayStartMs", 0),
+                strict = o.optBoolean("strict", false),
+                settingsPassUntilMs = o.optLong("settingsPassUntilMs", 0),
+                clock = o.optJSONObject("clock")?.let { j ->
+                    ClockAnchor(j.optLong("wallMs", 0), j.optLong("elapsedMs", 0), j.optLong("lastTrustedMs", 0))
+                } ?: ClockAnchor(),
             )
         } catch (e: Exception) {
             BankState()

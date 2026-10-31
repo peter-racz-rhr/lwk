@@ -70,7 +70,7 @@ The app uses no AndroidX or other libraries, only the Android framework.
 
 | Command | What it checks |
 |---|---|
-| `./gradlew test` | 25 JUnit tests for `TimeBank` and the JSON codec |
+| `./gradlew test` | 46 JUnit tests: time accounting, JSON codec, tamper-proof clock, and a 120,000-step fuzz of the blocking rules |
 | `node --test web-tests/games.test.js` | 14 tests of game rules and returns (exact slots return, roulette 36/37, simulated blackjack) |
 | `node web-tests/e2e.js` | Full UI run in Chromium with Playwright and the browser mock |
 
@@ -80,6 +80,19 @@ reduced motion. It fails on any console error or horizontal scroll. Install Play
 
 To try the UI in a desktop browser, open `app/src/main/assets/web/index.html`. Add
 `?mode=block&pkg=com.instagram.android` to the address to see the block screen.
+
+## Blocking and bypasses
+
+See [`docs/BYPASS-AUDIT.md`](docs/BYPASS-AUDIT.md) for 23 ways around a block, which ones Ante closes, and how each is tested.
+In short: no remove-and-re-add refill, no clock or time-zone tricks, sleep and split-screen are handled, and
+**Strict mode** (on Today) covers Settings and uninstalling behind a 30-second wait. Still open: websites in a
+browser, picture-in-picture video and background audio.
+
+## Sounds
+
+Every table has sound: chips, the card shoe, the ball on the wheel, the reel motor, a coin ring, and win and
+loss stings. They are all synthesized with Web Audio, so there are no audio files. The speaker button in each
+table's header mutes them, and the choice is remembered.
 
 ## Known limits
 

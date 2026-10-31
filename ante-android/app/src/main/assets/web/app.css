@@ -94,6 +94,24 @@ img { max-width: 100%; }
 .help summary { cursor: pointer; font-size: var(--t-sm); font-weight: 600; color: var(--brass); min-height: 40px; display: flex; align-items: center; }
 .help[open] { display: flex; flex-direction: column; gap: var(--s3); }
 .empty { display: flex; flex-direction: column; gap: var(--s4); }
+.status { display: flex; align-items: center; gap: var(--s2); font-size: var(--t-sm); font-weight: 600; color: var(--win); margin-top: calc(var(--s2) * -1); }
+.status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--win); box-shadow: 0 0 0 4px rgba(143,224,174,.15); }
+.tip { box-shadow: inset 0 0 0 1px var(--line-2); }
+.strict .h3 { display: inline-flex; align-items: center; gap: var(--s2); }
+.strict .h3 svg { color: var(--brass); }
+.switch { width: 52px; height: 32px; border-radius: var(--r-in); background: var(--surface-3); position: relative; flex: none; transition: background .2s ease; }
+.switch i { position: absolute; top: 4px; left: 4px; width: 24px; height: 24px; border-radius: 12px; background: var(--ivory-2); transition: transform .2s ease, background .2s ease; }
+.switch[aria-checked="true"] { background: var(--brass); }
+.switch[aria-checked="true"] i { transform: translateX(20px); background: var(--brass-ink); }
+.topbar .grow { flex: 1; min-width: 0; }
+.masthead .sound { margin-left: auto; }
+.sound[aria-pressed="false"] { color: var(--ivory-3); }
+.lockicon { display: grid; place-items: center; color: var(--brass); background: var(--surface-2); }
+.lockicon svg { width: 34px; height: 34px; }
+.wait { display: flex; flex-direction: column; align-items: center; gap: var(--s4); text-align: center; padding-block: var(--s2); }
+.wait-ring { --p: 0; width: 132px; height: 132px; border-radius: 50%; display: grid; place-items: center;
+  background: radial-gradient(circle, var(--surface) 0 60%, transparent 61%), conic-gradient(var(--brass) calc(var(--p) * 360deg), var(--surface-3) 0); }
+.wait-ring .num { font-size: 48px; font-weight: 800; }
 .facts { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: var(--s2); color: var(--ivory-2); font-size: var(--t-sm); }
 .facts li::marker { color: var(--brass); }
 

@@ -40,6 +40,10 @@
       : `<span class="appicon mono ${cls || ""}" aria-hidden="true">${esc(l.slice(0, 2))}</span>`;
   }
   const haptic = kind => { try { A.haptic(kind); } catch (e) { /* no-op */ } };
+  const SFX = window.AnteSFX || { play() {}, muted: true, toggle() { return true; } };
+  const chipFx = () => { haptic("tap"); SFX.play("chip"); };
+  const soundBtn = () => `<button class="iconbtn sound" data-a="sound" aria-pressed="${!SFX.muted}" aria-label="${SFX.muted ? "Turn sound on" : "Turn sound off"}">${SFX.muted ? ICON.soundOff : ICON.soundOn}</button>`;
+  let waitTimer = null;
   const refresh = () => { S = A.state(); };
 
   function toast(msg) {
@@ -54,6 +58,9 @@
     close: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>',
     plus: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
     today: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9.5 2.5h5"/></svg>',
+    soundOn: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>',
+    soundOff: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg>',
+    lock: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="3"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></svg>',
     tables: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><path d="M12 3.5v3M12 17.5v3M3.5 12h3M17.5 12h3"/></svg>',
   };
 
@@ -95,6 +102,19 @@
   function vToday() {
     const total = S.limits.reduce((a, l) => a + l.leftSec, 0);
     const date = new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" });
+    const health = !S.accessibility ? "" : !S.watching ? `
+      <section class="panel perm"><h2 class="h3">Blocking isn't running</h2>
+        <p class="muted">The switch is on, but Android stopped Ante's watcher. Switch <b>Ante app limits</b> off and on again.</p>
+        <button class="btn primary" data-a="settingsGo" data-go="acc">Open Accessibility settings</button></section>`
+      : `<div class="status"><span class="dot"></span><span>Blocking is on${S.strict ? " · Strict mode" : ""}</span></div>
+      ${S.batteryOk === false ? `<section class="panel tip"><h2 class="h3">Keep Ante awake</h2><p class="muted">Some phones put apps to sleep to save battery, which stops blocking. Let Ante run in the background.</p><button class="btn quiet" data-a="settingsGo" data-go="battery">Allow background use</button></section>` : ""}
+      ${S.autoTime === false ? `<section class="panel tip"><h2 class="h3">Date & time is set by hand</h2><p class="muted">Ante keeps its own clock, so changing the date won't refill budgets. Time while the phone is switched off isn't counted towards midnight. Turn on automatic date & time to fix that.</p><button class="btn quiet" data-a="settingsGo" data-go="date">Open Date & time</button></section>` : ""}`;
+    const strict = !S.accessibility ? "" : `
+      <section class="panel strict" aria-labelledby="strict-h">
+        <div class="panel-head"><h2 class="h3" id="strict-h">${ICON.lock} Strict mode</h2>
+          <button class="switch" role="switch" aria-checked="${!!S.strict}" data-a="${S.strict ? "strictOff" : "strictOn"}" aria-labelledby="strict-h"><i></i></button></div>
+        <p class="muted">${S.strict ? "Settings and uninstalling are covered. Getting in, or turning this off, takes a 30-second wait." : "Covers Settings and the uninstall screen too, so blocking can't be switched off on impulse."}</p>
+      </section>`;
     const perm = S.accessibility ? "" : `
       <section class="panel perm" aria-labelledby="perm-h">
         <h2 class="h3" id="perm-h">Let Ante see which app you open</h2>
@@ -128,11 +148,12 @@
         <p class="bignum num" aria-label="${fmt(total)} left today">${fmt(total)}</p>
         <p class="muted">${S.limits.length ? `Across ${S.limits.length} ${S.limits.length === 1 ? "app" : "apps"}. Resets at midnight.` : "Add an app to give it a daily budget."}</p>
       </section>
-      ${perm}
+      ${perm}${health}
       <section class="panel" aria-labelledby="lim-h">
         <div class="panel-head"><h2 class="h3" id="lim-h">Limits</h2><button class="link" data-a="add">${ICON.plus}Add app</button></div>
         ${rows ? `<div class="limits">${rows}</div>` : `<div class="empty"><p class="muted">No limits yet. Pick an app you open too often and give it a daily budget.</p><button class="btn primary" data-a="add">Add an app</button></div>`}
       </section>
+      ${strict}
       <section class="panel slip" aria-labelledby="slip-h">
         <div class="panel-head"><h2 class="h3" id="slip-h">Bets today</h2>${S.ledger.length ? `<span class="num ${net > 0 ? "win" : net < 0 ? "loss" : "muted"}">${signed(net)}</span>` : ""}</div>
         ${ledger || `<p class="muted">No bets yet. Stake minutes at the tables.</p>`}
@@ -144,8 +165,8 @@
     ensureStakeApp();
     const playable = S.limits.filter(l => l.leftSec >= 60);
     const head = BLOCK
-      ? `<header class="topbar"><button class="iconbtn" data-a="toBlock" aria-label="Back to ${esc(CTX.label)}">${ICON.back}</button><div><p class="eyebrow">Playing with ${esc(CTX.label)} time</p><h1 class="h2">Tables</h1></div></header>`
-      : `<header class="masthead"><span class="mark">Ante</span></header><header><h1 class="h1">Tables</h1><p class="muted">Stake minutes from an app. Wins go back to that app. Losses are gone for today.</p></header>`;
+      ? `<header class="topbar"><button class="iconbtn" data-a="toBlock" aria-label="Back to ${esc(CTX.label)}">${ICON.back}</button><div class="grow"><p class="eyebrow">Playing with ${esc(CTX.label)} time</p><h1 class="h2">Tables</h1></div>${soundBtn()}</header>`
+      : `<header class="masthead"><span class="mark">Ante</span>${soundBtn()}</header><header><h1 class="h1">Tables</h1><p class="muted">Stake minutes from an app. Wins go back to that app. Losses are gone for today.</p></header>`;
     if (!playable.length || !stakeLimit() || stakeLimit().leftSec < 60) {
       return `<div class="screen" id="screen">${head}<section class="panel"><h2 class="h3">Nothing to stake</h2><p class="muted">${S.limits.length ? "Every limited app is under a minute for today. Budgets reset at midnight." : "Add a limit on the Today tab first. Its minutes are your chips."}</p></section></div>`;
     }
@@ -165,14 +186,44 @@
     const g = G.GAMES.find(x => x.id === ui.game);
     return `<div class="screen game-screen" id="screen">
       <header class="topbar"><button class="iconbtn" data-a="leave" aria-label="Back to tables" ${ui.busy || ui.round ? "disabled" : ""}>${ICON.back}</button>
-        <div><h1 class="h2">${g.name}</h1><p class="muted">Returns ${g.rtp} on average</p></div></header>
+        <div class="grow"><h1 class="h2">${g.name}</h1><p class="muted">Returns ${g.rtp} on average</p></div>${soundBtn()}</header>
       <section class="felt" id="table" aria-label="${g.name} table"></section>
       <p class="result" id="result" aria-live="polite"></p>
       <section class="panel controls" id="controls"></section>
     </div>`;
   }
 
+  /* A short pause before a blocked app can be opened, the way delay apps break the habit loop. */
+  const BREATH_S = Number(new URLSearchParams(location.search).get("breath") || 5);
+  const breathEnds = Date.now() + BREATH_S * 1000;
+  const breathLeft = () => Math.max(0, Math.ceil((breathEnds - Date.now()) / 1000));
+  if (BLOCK && BREATH_S > 0) {
+    const t = setInterval(() => {
+      const b = document.getElementById("open-app");
+      const left = breathLeft();
+      if (b) {
+        const l = lim(CTX.pkg);
+        b.disabled = left > 0;
+        b.textContent = left > 0 ? `Take a breath · ${left}` : `Open ${CTX.label || (l && l.label) || "app"} · ${fmt(ui.openPick)}`;
+      }
+      if (left <= 0) clearInterval(t);
+    }, 250);
+  }
+
+  function vGuard() {
+    const installer = /packageinstaller/.test(CTX.pkg || "");
+    return `<div class="screen block" id="screen">
+      <div class="block-top"><span class="appicon xl lockicon" aria-hidden="true">${ICON.lock}</span><p class="eyebrow">Strict mode</p>
+        <h1 class="h1">${installer ? "Uninstalling is locked" : "Settings is locked"}</h1></div>
+      <p class="muted">${installer ? "Strict mode keeps Ante installed. To remove it, turn off Strict mode in Ante first, which takes a 30-second wait." : "Strict mode covers Settings so blocking can't be switched off on impulse. Wait 30 seconds to use Settings for 2 minutes."}</p>
+      <div class="grow"></div>
+      ${installer ? `<button class="btn primary" data-a="openAnte">Open Ante</button>` : `<button class="btn primary" data-a="guardWait">Start the 30-second wait</button>`}
+      <button class="btn ghost" data-a="closeBlock">Back to home screen</button>
+    </div>`;
+  }
+
   function vBlock() {
+    if (CTX.note === "strict") return vGuard();
     const l = lim(CTX.pkg);
     const label = esc(CTX.label || (l && l.label) || "This app");
     if (!l) {
@@ -196,7 +247,7 @@
       <section class="panel">
         <p class="eyebrow">Open for</p>
         <div class="chips">${opts.map(([v, t]) => `<button class="chip" data-a="pickOpen" data-v="${v}" aria-pressed="${ui.openPick === v}" ${v > l.leftSec ? "disabled" : ""}>${t}</button>`).join("")}</div>
-        <button class="btn primary" data-a="openApp">Open ${label} · ${fmt(ui.openPick)}</button>
+        <button class="btn primary" id="open-app" data-a="openApp" ${breathLeft() > 0 ? "disabled" : ""}>${breathLeft() > 0 ? `Take a breath · ${breathLeft()}` : `Open ${label} · ${fmt(ui.openPick)}`}</button>
         <button class="btn quiet" data-a="toTables" ${l.leftSec < 60 ? "disabled" : ""}>Play for more time</button>
       </section>
       <button class="btn ghost" data-a="closeBlock">Not now</button>
@@ -212,8 +263,44 @@
   }
 
   /* ---------- sheets ---------- */
+  /* A wait the native side times (30 s). Shows a countdown, then unlocks the action. */
+  function openWait(opts) {
+    A.startWait();
+    ui.sheet = Object.assign({ type: "wait", left: 30000 }, opts);
+    clearInterval(waitTimer);
+    const tick = () => {
+      if (!ui.sheet || ui.sheet.type !== "wait") { clearInterval(waitTimer); return; }
+      ui.sheet.left = Number(A.waitLeftMs());
+      const n = document.getElementById("wait-n"), b = document.getElementById("wait-go"), ring = document.getElementById("wait-ring");
+      if (n) n.textContent = Math.ceil(ui.sheet.left / 1000);
+      if (ring) ring.style.setProperty("--p", String(1 - ui.sheet.left / 30000));
+      if (b) b.disabled = ui.sheet.left > 0;
+      if (ui.sheet.left <= 0) clearInterval(waitTimer);
+    };
+    paintOverlay(); tick();
+    waitTimer = setInterval(tick, 250);
+  }
+
   function vSheet() {
     const sh = ui.sheet; if (!sh) return "";
+    if (sh.type === "wait") {
+      return `<div class="scrim" data-a="closeSheet"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="wait-h" data-stop>
+        <div class="sheet-head"><h2 class="h2" id="wait-h">${esc(sh.title)}</h2><button class="iconbtn" data-a="closeSheet" aria-label="Cancel">${ICON.close}</button></div>
+        <div class="wait"><div class="wait-ring" id="wait-ring" style="--p:${1 - sh.left / 30000}"><span class="num" id="wait-n">${Math.ceil(sh.left / 1000)}</span></div>
+          <p class="muted">${esc(sh.body)}</p></div>
+        <button class="btn primary" id="wait-go" data-a="waitCta" ${sh.left > 0 ? "disabled" : ""}>${esc(sh.cta)}</button>
+      </div></div>`;
+    }
+    if (sh.type === "strict") {
+      return `<div class="scrim" data-a="closeSheet"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="strict-s" data-stop>
+        <div class="sheet-head"><h2 class="h2" id="strict-s">Turn on Strict mode</h2><button class="iconbtn" data-a="closeSheet" aria-label="Close">${ICON.close}</button></div>
+        <ul class="facts"><li>Opening Settings shows a block screen. After a 30-second wait you get 2 minutes.</li>
+          <li>The uninstall screen is covered. Ante can only be removed after Strict mode is off.</li>
+          <li>Turning Strict mode off takes the same 30-second wait.</li>
+          <li>Quick settings in the notification shade keep working, so Wi-Fi, flashlight and emergency calls are never locked.</li></ul>
+        <div class="btn-row"><button class="btn quiet" data-a="closeSheet">Not now</button><button class="btn primary" data-a="agreeStrict">Turn on</button></div>
+      </div></div>`;
+    }
     if (sh.type === "consent") {
       return `<div class="scrim" data-a="closeSheet"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="consent-h" data-stop>
         <div class="sheet-head"><h2 class="h2" id="consent-h">Before you switch it on</h2><button class="iconbtn" data-a="closeSheet" aria-label="Close">${ICON.close}</button></div>
@@ -404,8 +491,9 @@
     ui.busy = false; ui.round = null;
     const r = document.getElementById("result");
     if (r) { r.textContent = text; }
-    if (net > 0) { FX.burst(document.getElementById("table"), { power: multiple >= 10 ? 1.4 : 1 }); haptic("win"); }
-    else if (net < 0) haptic("loss");
+    if (net > 0) { FX.burst(document.getElementById("table"), { power: multiple >= 10 ? 1.4 : 1 }); haptic("win"); SFX.play(multiple >= 10 ? "bigWin" : "win"); }
+    else if (net < 0) { haptic("loss"); SFX.play("lose"); }
+    else SFX.play("push");
     renderControls();
   }
   const begin = () => { ui.busy = true; ui.res = null; renderControls(); };
@@ -509,8 +597,12 @@
   const ACT = {
     tab(d) { ui.view = d.t; ui.game = null; render(); },
     openAcc() { ui.sheet = { type: "consent" }; paintOverlay(); },
-    agreeAcc() { ui.sheet = null; paintOverlay(); A.openAccessibilitySettings(); setTimeout(() => { refresh(); render(); }, 300); },
-    openInfo() { A.openAppInfo(); },
+    agreeAcc() {
+      ui.sheet = null; paintOverlay();
+      if (A.openAccessibilitySettings() === false) { ACT.settingsGo({ go: "acc" }); return; }
+      setTimeout(() => { refresh(); render(); }, 300);
+    },
+    openInfo() { ACT.settingsGo({ go: "info" }); },
     add() {
       ui.sheet = { type: "pick", apps: null, q: "" }; paintOverlay();
       setTimeout(() => { if (ui.sheet && ui.sheet.type === "pick") { ui.sheet.apps = A.apps(); paintOverlay(); loadIcons(ui.sheet.apps); } }, 30);
@@ -521,7 +613,7 @@
       ui.sheet = { type: "edit", pkg: a.pkg, label: a.label, limit: 1800 }; paintOverlay();
     },
     edit(d) { const l = lim(d.pkg); ui.sheet = { type: "edit", pkg: l.pkg, label: l.label, limit: l.limitSec }; paintOverlay(); },
-    closeSheet() { ui.sheet = null; paintOverlay(); },
+    closeSheet() { ui.sheet = null; clearInterval(waitTimer); paintOverlay(); },
     limStep(d) { ui.sheet.limit = Math.max(300, Math.min(14400, ui.sheet.limit + Number(d.d))); paintOverlay(); },
     limSet(d) { ui.sheet.limit = Number(d.v); paintOverlay(); },
     saveLimit() {
@@ -531,18 +623,41 @@
       toast(existed ? `${sh.label} limit set to ${fmt(sh.limit)}.` : `${sh.label} added with ${fmt(sh.limit)} a day.`);
     },
     removeLimit() { const sh = ui.sheet; A.removeLimit(sh.pkg); refresh(); ui.sheet = null; render(); toast(`${sh.label} no longer has a limit.`); },
-    stakeApp(d) { ui.stakePkg = d.pkg; clampStake(); haptic("tap"); render(); },
-    stake(d) { ui.stake += Number(d.d); clampStake(); haptic("tap"); ui.view === "game" ? renderControls() : render(); },
-    stakeSet(d) { ui.stake = Number(d.v); clampStake(); haptic("tap"); ui.view === "game" ? renderControls() : render(); },
+    stakeApp(d) { ui.stakePkg = d.pkg; clampStake(); chipFx(); render(); },
+    stake(d) { ui.stake += Number(d.d); clampStake(); chipFx(); ui.view === "game" ? renderControls() : render(); },
+    stakeSet(d) { ui.stake = Number(d.v); clampStake(); chipFx(); ui.view === "game" ? renderControls() : render(); },
+    sound() {
+      SFX.toggle();
+      document.querySelectorAll('[data-a="sound"]').forEach(b => { const t = document.createElement("div"); t.innerHTML = soundBtn(); b.replaceWith(t.firstElementChild); });
+    },
+    strictOn() { ui.sheet = { type: "strict" }; paintOverlay(); },
+    agreeStrict() { A.setStrict(true); refresh(); ui.sheet = null; render(); toast("Strict mode is on."); },
+    strictOff() { openWait({ title: "Turn off Strict mode", body: "Wait 30 seconds. If you still want to turn it off after that, you can.", cta: "Turn off Strict mode", then: "strictOffNow" }); },
+    strictOffNow() { if (!A.setStrict(false)) { toast("The wait isn't over yet."); return; } refresh(); ui.sheet = null; render(); toast("Strict mode is off."); },
+    settingsGo(d) {
+      const go = { acc: () => A.openAccessibilitySettings(), battery: () => A.openBatterySettings(), date: () => A.openDateSettings(), info: () => A.openAppInfo() }[d.go];
+      if (!go) return;
+      if (S.strict) { openWait({ title: "Settings is behind Strict mode", body: "Wait 30 seconds to open it.", cta: "Open Settings", then: "settingsNow", go: d.go }); return; }
+      go(); setTimeout(() => { refresh(); render(); }, 300);
+    },
+    settingsNow() {
+      const go = ui.sheet && ui.sheet.go;
+      const fn = { acc: () => A.openAccessibilitySettings(), battery: () => A.openBatterySettings(), date: () => A.openDateSettings(), info: () => A.openAppInfo() }[go];
+      if (fn && fn() === false) { toast("The wait isn't over yet."); return; }
+      ui.sheet = null; paintOverlay();
+    },
+    guardWait() { openWait({ title: "Open Settings", body: "Settings opens for 2 minutes after the wait.", cta: "Open Settings", then: "guardOpen" }); },
+    guardOpen() { if (A.openGuarded(CTX.pkg) === false) { toast("The wait isn't over yet."); return; } ui.sheet = null; paintOverlay(); },
+    waitCta() { const t = ui.sheet && ui.sheet.then; if (t && ACT[t] && ui.sheet.left <= 0) ACT[t](); },
     game(d) { ui.game = d.id; ui.view = "game"; render(); },
     leave() { if (ui.busy || ui.round) return; ui.view = "tables"; ui.game = null; render(); },
     coinPick(d) { ui.pick = d.v; renderControls(); },
-    rBet(d) { ui.bet = d.v; haptic("tap"); renderControls(); },
+    rBet(d) { ui.bet = d.v; chipFx(); renderControls(); },
     rNum(d) { ui.num = (ui.num + Number(d.d) + 37) % 37; ui.bet = "num"; renderControls(); },
     coinFlip: guarded(coinFlip), rSpin: guarded(rSpin), sSpin: guarded(sSpin),
     bjDeal: guarded(bjDeal), bjHit: guarded(bjHit), bjStand: guarded(async () => { if (!ui.busy) await bjSettle(); }),
     bjDouble: guarded(bjDouble), pDeal: guarded(pDeal), pDraw: guarded(pDraw),
-    pickOpen(d) { ui.openPick = Number(d.v); haptic("tap"); render(); },
+    pickOpen(d) { ui.openPick = Number(d.v); chipFx(); render(); },
     openApp() {
       if (!A.open(CTX.pkg, ui.openPick)) { toast("Couldn't open that app. It may have been uninstalled."); return; }
       refresh(); render();
