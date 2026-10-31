@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Ante</string>
+    <string name="accessibility_label">Ante app limits</string>
+    <string name="accessibility_description">Ante checks which app you open so it can cover apps that are over their daily limit. It does not read anything on your screen.</string>
+</resources>

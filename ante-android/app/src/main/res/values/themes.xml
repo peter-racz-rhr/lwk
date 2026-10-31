@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Ante" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/ante_bg</item>
+        <item name="android:colorBackground">@color/ante_bg</item>
+        <item name="android:statusBarColor">@color/ante_bg</item>
+        <item name="android:navigationBarColor">@color/ante_bg</item>
+        <item name="android:colorAccent">@color/ante_brass</item>
+    </style>
+</resources>

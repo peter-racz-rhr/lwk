@@ -1,0 +1,56 @@
+package com.ante.app.core
+
+import org.json.JSONArray
+import org.json.JSONObject
+
+/** JSON (de)serialization for [BankState]. Decoding never throws: bad data yields an empty state. */
+object Codec {
+    fun encode(s: BankState): String = toJson(s).toString()
+
+    fun toJson(s: BankState): JSONObject = JSONObject().apply {
+        put("day", s.day)
+        put("limits", JSONArray().apply {
+            s.limits.forEach {
+                put(JSONObject().put("pkg", it.pkg).put("label", it.label).put("limitSec", it.limitSec).put("leftSec", it.leftSec))
+            }
+        })
+        put("ledger", JSONArray().apply {
+            s.ledger.forEach {
+                put(JSONObject().put("game", it.game).put("pkg", it.pkg).put("deltaSec", it.deltaSec).put("atMs", it.atMs))
+            }
+        })
+        val session = s.session
+        if (session != null) {
+            put("session", JSONObject().put("pkg", session.pkg).put("startedAtMs", session.startedAtMs).put("grantedSec", session.grantedSec))
+        }
+    }
+
+    fun decode(raw: String?): BankState {
+        if (raw.isNullOrBlank()) return BankState()
+        return try {
+            val o = JSONObject(raw)
+            BankState(
+                day = o.optString("day", ""),
+                limits = o.optJSONArray("limits").objects().mapNotNull { j ->
+                    val pkg = j.optString("pkg", "")
+                    if (pkg.isEmpty()) null else Limit(pkg, j.optString("label", pkg), j.optInt("limitSec", 0), j.optInt("leftSec", 0))
+                },
+                ledger = o.optJSONArray("ledger").objects().mapNotNull { j ->
+                    val pkg = j.optString("pkg", "")
+                    if (pkg.isEmpty()) null else Bet(j.optString("game", ""), pkg, j.optInt("deltaSec", 0), j.optLong("atMs", 0))
+                },
+                session = o.optJSONObject("session")?.let { j ->
+                    val pkg = j.optString("pkg", "")
+                    if (pkg.isEmpty()) null else Session(pkg, j.optLong("startedAtMs", 0), j.optInt("grantedSec", 0))
+                },
+            )
+        } catch (e: Exception) {
+            BankState()
+        }
+    }
+
+    private fun JSONArray?.objects(): List<JSONObject> {
+        if (this == null) return emptyList()
+        return (0 until length()).mapNotNull { optJSONObject(it) }
+    }
+}
