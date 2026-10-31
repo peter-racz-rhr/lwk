@@ -117,8 +117,9 @@
     return fmtH((mid - now) / 1000);
   }
   const todayTotals = () => {
-    const won = S.ledger.filter(b => b.deltaSec > 0).reduce((a, b) => a + b.deltaSec, 0);
-    const lost = S.ledger.filter(b => b.deltaSec < 0).reduce((a, b) => a - b.deltaSec, 0);
+    // Native counts every bet; older saves only have the ledger (latest 50).
+    const won = S.wonTodaySec != null ? S.wonTodaySec : S.ledger.filter(b => b.deltaSec > 0).reduce((a, b) => a + b.deltaSec, 0);
+    const lost = S.lostTodaySec != null ? S.lostTodaySec : S.ledger.filter(b => b.deltaSec < 0).reduce((a, b) => a - b.deltaSec, 0);
     return { used: S.usedTodaySec || 0, won, lost };
   };
   /** Last n days, oldest first; days with no record count as zero. */
@@ -245,7 +246,9 @@
     const items = range === "week" ? lastDays(7) : lastMonths(6);
     const days30 = lastDays(30);
     const total = items.reduce((a, i) => a + i.used, 0);
-    const activeDays = range === "week" ? 7 : Math.max(1, lastDays(183).length);
+    // 6M average: count from the first day with any use, so a new install isn't divided by 183.
+    const span = lastDays(183), first = span.findIndex(d => d.used > 0);
+    const activeDays = range === "week" ? 7 : Math.max(1, first < 0 ? 1 : span.length - first);
     const tr = trendLine(days30);
     const won30 = days30.reduce((a, d) => a + d.won, 0), lost30 = days30.reduce((a, d) => a + d.lost, 0);
     const recent = S.ledger.slice(0, 10).map(b => {
@@ -904,7 +907,7 @@
     if (ui.view === "game") { if (!ui.busy && !ui.round) { ui.view = "tables"; ui.game = null; render(); } return true; }
     if (BLOCK && ui.view === "tables") { ui.view = "block"; render(); return true; }
     if (!BLOCK && ["tables", "history", "profile"].includes(ui.view)) { ui.view = "today"; render(); return true; }
-    if (ui.view === "welcome" && ui.welcomeStep === "perm") { ui.welcomeStep = "signin"; render(); return true; }
+    if (ui.view === "welcome" && ui.welcomeStep === "perm") { if (!ACC.signedIn) { ui.welcomeStep = "signin"; render(); } return true; }
     if (ui.view === "welcome" && document.querySelector('#signin[data-open="true"]')) { morphSignin(false); return true; }
     return false;
   };

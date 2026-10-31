@@ -22,6 +22,8 @@ object Codec {
         put("parked", JSONObject().apply { s.parked.forEach { (k, v) -> put(k, v) } })
         put("dayStartMs", s.dayStartMs)
         put("usedTodaySec", s.usedTodaySec)
+        put("wonTodaySec", s.wonTodaySec)
+        put("lostTodaySec", s.lostTodaySec)
         put("history", JSONArray().apply {
             s.history.forEach { put(JSONObject().put("day", it.day).put("usedSec", it.usedSec).put("wonSec", it.wonSec).put("lostSec", it.lostSec)) }
         })
@@ -57,6 +59,8 @@ object Codec {
                 } ?: emptyMap(),
                 dayStartMs = o.optLong("dayStartMs", 0),
                 usedTodaySec = o.optInt("usedTodaySec", 0),
+                wonTodaySec = o.optInt("wonTodaySec", 0),
+                lostTodaySec = o.optInt("lostTodaySec", 0),
                 history = o.optJSONArray("history").objects().mapNotNull { j ->
                     val day = j.optString("day", "")
                     if (day.isEmpty()) null else DaySummary(day, j.optInt("usedSec", 0), j.optInt("wonSec", 0), j.optInt("lostSec", 0))

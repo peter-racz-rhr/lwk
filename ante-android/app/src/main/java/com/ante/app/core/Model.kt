@@ -41,6 +41,9 @@ data class BankState(
     val settingsPassUntilMs: Long = 0,
     /** Screen time actually spent in limited apps today (sessions only, not bets). */
     val usedTodaySec: Int = 0,
+    /** Minutes won and lost at the tables today, counted per bet (the ledger only keeps the latest 50). */
+    val wonTodaySec: Int = 0,
+    val lostTodaySec: Int = 0,
     /** Finished days, newest first. */
     val history: List<DaySummary> = emptyList(),
 )

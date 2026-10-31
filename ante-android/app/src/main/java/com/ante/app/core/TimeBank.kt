@@ -15,16 +15,22 @@ class TimeBank(initial: BankState = BankState()) {
     private val openStakes = mutableMapOf<String, Int>()
 
     /** Resets every budget when the calendar day changes. Returns true when a reset happened. */
-    fun rollover(today: String): Boolean {
+    fun rollover(today: String, nowMs: Long? = null): Boolean {
         if (state.day == today) return false
+        // A session still running at midnight counts towards the day it ran in.
+        val running = state.session
+        if (running != null && nowMs != null) {
+            val used = ((nowMs - running.startedAtMs).coerceAtLeast(0) / 1000L).toInt().coerceAtMost(running.grantedSec)
+            state = state.copy(usedTodaySec = state.usedTodaySec + used)
+        }
         val archived = if (state.day.isEmpty()) state.history else {
-            val won = state.ledger.filter { it.deltaSec > 0 }.sumOf { it.deltaSec }
-            val lost = state.ledger.filter { it.deltaSec < 0 }.sumOf { -it.deltaSec }
-            (listOf(DaySummary(state.day, state.usedTodaySec, won, lost)) + state.history).take(HISTORY_MAX)
+            (listOf(DaySummary(state.day, state.usedTodaySec, state.wonTodaySec, state.lostTodaySec)) + state.history).take(HISTORY_MAX)
         }
         state = state.copy(
             history = archived,
             usedTodaySec = 0,
+            wonTodaySec = 0,
+            lostTodaySec = 0,
             day = today,
             limits = state.limits.map { it.copy(leftSec = it.limitSec) },
             ledger = emptyList(),
@@ -49,7 +55,7 @@ class TimeBank(initial: BankState = BankState()) {
             return false
         }
         if (state.dayStartMs != 0L && nowMs < state.dayStartMs + MIN_DAY_MS) return false
-        rollover(today)
+        rollover(today, nowMs)
         state = state.copy(dayStartMs = date.atStartOfDay(zone).toInstant().toEpochMilli())
         return true
     }
@@ -94,9 +100,13 @@ class TimeBank(initial: BankState = BankState()) {
         return updated
     }
 
-    fun removeLimit(pkg: String) {
+    fun removeLimit(pkg: String, nowMs: Long? = null) {
         val existing = limitFor(pkg) ?: return
         val session = state.session
+        if (session != null && session.pkg == pkg && nowMs != null) {
+            val used = ((nowMs - session.startedAtMs).coerceAtLeast(0) / 1000L).toInt().coerceAtMost(session.grantedSec)
+            state = state.copy(usedTodaySec = state.usedTodaySec + used)
+        }
         // Unused session time counts as left when parking the limit.
         val reserved = if (session != null && session.pkg == pkg) session.grantedSec else 0
         state = state.copy(
@@ -180,7 +190,11 @@ class TimeBank(initial: BankState = BankState()) {
         if (ret > 0) adjustLeft(pkg, ret)
         val net = ret - stakeSec
         val bet = Bet(game.take(32), pkg, net, nowMs)
-        state = state.copy(ledger = (listOf(bet) + state.ledger).take(LEDGER_MAX))
+        state = state.copy(
+            ledger = (listOf(bet) + state.ledger).take(LEDGER_MAX),
+            wonTodaySec = state.wonTodaySec + net.coerceAtLeast(0),
+            lostTodaySec = state.lostTodaySec + (-net).coerceAtLeast(0),
+        )
         return net
     }
 

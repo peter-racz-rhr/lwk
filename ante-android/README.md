@@ -97,7 +97,7 @@ The app uses only the Android framework, plus AndroidX Credential Manager and Go
 
 | Command | What it checks |
 |---|---|
-| `./gradlew test` | 60 JUnit tests: time accounting, daily history, JSON codec, tamper-proof clock, and a 120,000-step fuzz of the blocking rules |
+| `./gradlew test` | 63 JUnit tests: time accounting, daily history, JSON codec, tamper-proof clock, and a 120,000-step fuzz of the blocking rules |
 | `node --test web-tests/games.test.js` | 14 tests of game rules and returns (exact slots return, roulette 36/37, simulated blackjack) |
 | `node web-tests/e2e.js` | Full UI run in Chromium with Playwright and the browser mock |
 

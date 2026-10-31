@@ -145,6 +145,8 @@
       open[pkg] -= stake;
       ret = Math.max(0, Math.min(Math.round(ret), stake * 100));
       l.leftSec += ret;
+      S.wonTodaySec = (S.wonTodaySec || 0) + Math.max(0, ret - stake);
+      S.lostTodaySec = (S.lostTodaySec || 0) + Math.max(0, stake - ret);
       S.ledger.unshift({ game, pkg, deltaSec: ret - stake, atMs: Date.now() });
       S.ledger = S.ledger.slice(0, 50); save();
       return ret - stake;

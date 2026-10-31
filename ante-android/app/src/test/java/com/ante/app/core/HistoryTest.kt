@@ -51,6 +51,30 @@ class HistoryTest {
         assertTrue(b.state.history.isEmpty())
     }
 
+    @Test fun winsAndLossesCountEveryBetNotJustTheLedgerWindow() {
+        val b = bank()
+        repeat(80) { b.placeBet(ig, 1); b.settleBet(ig, "Coin flip", 1, 2, it.toLong()) } // +1 each
+        assertEquals(80, b.state.wonTodaySec)
+        b.rollover("2026-10-31")
+        assertEquals(80, b.state.history.first().wonSec)
+        assertEquals(0, b.state.wonTodaySec)
+    }
+
+    @Test fun aSessionRunningAtMidnightCountsTowardsTheDayItRanIn() {
+        val b = bank()
+        b.startSession(ig, 600, 0)
+        b.rollover("2026-10-31", nowMs = 240_000)
+        assertEquals(240, b.state.history.first().usedSec)
+        assertEquals(null, b.state.session)
+    }
+
+    @Test fun removingALimitMidSessionKeepsTheTimeUsed() {
+        val b = bank()
+        b.startSession(ig, 600, 0)
+        b.removeLimit(ig, nowMs = 90_000)
+        assertEquals(90, b.state.usedTodaySec)
+    }
+
     @Test fun historySurvivesSaveAndLoad() {
         val b = bank()
         b.startSession(ig, 60, 0); b.expireSession(60_000)
@@ -58,5 +82,7 @@ class HistoryTest {
         val again = Codec.decode(Codec.encode(b.state))
         assertEquals(b.state.history, again.history)
         assertEquals(b.state.usedTodaySec, again.usedTodaySec)
+        assertEquals(b.state.wonTodaySec, again.wonTodaySec)
+        assertEquals(b.state.lostTodaySec, again.lostTodaySec)
     }
 }

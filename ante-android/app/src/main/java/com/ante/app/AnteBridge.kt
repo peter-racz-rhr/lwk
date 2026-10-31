@@ -55,8 +55,16 @@ class AnteBridge(
     /** Installed apps without icons (fast); the page fetches icons one by one with [icon]. */
     /* ---- Account and onboarding ---- */
 
+    /** Installs from before onboarding existed (limits already set) count as onboarded. */
     @JavascriptInterface
-    fun account(): String = Account.toJson(ctx).toString()
+    fun account(): String {
+        val json = Account.toJson(ctx)
+        if (!json.optBoolean("onboarded") && Bank.read { it.state.limits.isNotEmpty() }) {
+            Account.setOnboarded(ctx)
+            json.put("onboarded", true)
+        }
+        return json.toString()
+    }
 
     /** Opens Google's sign-in sheet. The result arrives in the page as window.anteAuth(result). */
     @JavascriptInterface
@@ -68,9 +76,11 @@ class AnteBridge(
         }
     }
 
+    /** Clears the account right away (the page reads it back immediately), then Google's saved choice. */
     @JavascriptInterface
     fun signOut() {
-        activity.runOnUiThread { GoogleAuth.signOut(activity) }
+        Account.clear(ctx)
+        activity.runOnUiThread { GoogleAuth.forgetGoogleChoice(activity) }
     }
 
     @JavascriptInterface
@@ -92,7 +102,7 @@ class AnteBridge(
     @JavascriptInterface
     fun removeLimit(pkg: String): Boolean {
         if (!validPkg(pkg)) return false
-        Bank.edit { it.removeLimit(pkg) }
+        Bank.editAt { b, now -> b.removeLimit(pkg, now) }
         return true
     }
 

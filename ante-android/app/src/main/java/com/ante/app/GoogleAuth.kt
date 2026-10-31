@@ -79,8 +79,8 @@ object GoogleAuth {
         }
     }
 
-    fun signOut(activity: Activity) {
-        Account.clear(activity)
+    /** Clears Google's remembered account choice, so the next sign-in shows the account picker. */
+    fun forgetGoogleChoice(activity: Activity) {
         try {
             CredentialManager.create(activity).clearCredentialStateAsync(
                 ClearCredentialStateRequest(), CancellationSignal(), main,
