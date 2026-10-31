@@ -53,6 +53,29 @@ class AnteBridge(
     }
 
     /** Installed apps without icons (fast); the page fetches icons one by one with [icon]. */
+    /* ---- Account and onboarding ---- */
+
+    @JavascriptInterface
+    fun account(): String = Account.toJson(ctx).toString()
+
+    /** Opens Google's sign-in sheet. The result arrives in the page as window.anteAuth(result). */
+    @JavascriptInterface
+    fun signInWithGoogle() {
+        activity.runOnUiThread {
+            GoogleAuth.signIn(activity) { result ->
+                webView.evaluateJavascript("window.anteAuth && window.anteAuth(" + JSONObject.quote(result.toString()) + ")", null)
+            }
+        }
+    }
+
+    @JavascriptInterface
+    fun signOut() {
+        activity.runOnUiThread { GoogleAuth.signOut(activity) }
+    }
+
+    @JavascriptInterface
+    fun finishOnboarding() = Account.setOnboarded(ctx)
+
     @JavascriptInterface
     fun apps(): String = AppCatalog.launchableApps(ctx).toString()
 

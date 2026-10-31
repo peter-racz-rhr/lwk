@@ -39,6 +39,18 @@ data class BankState(
     val strict: Boolean = false,
     /** Until when Settings may be used despite strict mode. */
     val settingsPassUntilMs: Long = 0,
+    /** Screen time actually spent in limited apps today (sessions only, not bets). */
+    val usedTodaySec: Int = 0,
+    /** Finished days, newest first. */
+    val history: List<DaySummary> = emptyList(),
+)
+
+/** One finished day, kept for the history charts. */
+data class DaySummary(
+    val day: String,
+    val usedSec: Int,
+    val wonSec: Int,
+    val lostSec: Int,
 )
 
 enum class Decision { ALLOW, BLOCK }

@@ -20,6 +20,33 @@ edge, so playing tends to cut screen time. No real money is involved.
 
 From a terminal: `./gradlew assembleDebug`, and `./gradlew test` for the unit tests.
 
+## Google sign-in (one-time setup, about 10 minutes)
+
+Sign-in uses Android's Credential Manager ("Sign in with Google"), so Google shows its own account
+sheet and Ante never sees a password. Until you finish these steps, the Google button says sign-in
+isn't set up, and everything else works.
+
+1. Go to [console.cloud.google.com](https://console.cloud.google.com) and create a project (for example "Ante").
+2. Open **Google Auth Platform**, also listed as APIs & Services → OAuth consent screen. Fill in the
+   app name and support email, then choose **External**. While the app is in *Testing*, add your own
+   Google account under **Audience → Test users**.
+3. **Get your app's SHA-1.** In Android Studio, open the Gradle panel → *app* → *Tasks* → *android* →
+   **signingReport**, or run `./gradlew signingReport`. Copy the SHA1 of the `debug` variant.
+4. **Create the Android client.** Go to **Clients → Create client → Android**. Enter package name
+   `com.ante.app` and paste the SHA-1.
+5. **Create the Web client.** Go to **Clients → Create client → Web application**. It needs no
+   redirect URIs. Copy its **Client ID**, which ends in `.apps.googleusercontent.com`.
+6. Paste that **Web** client ID into `app/src/main/res/values/google.xml` in place of
+   `REPLACE_WITH_WEB_CLIENT_ID.apps.googleusercontent.com`.
+7. Rebuild and install. The phone needs Google Play services and a Google account.
+
+The release build is signed with a different key, so it has a different SHA-1. Before you share a
+release APK, add a second Android client with the release key's SHA-1.
+
+**What signing in does today:** it saves your name and email on the phone and shows them on
+Profile. Ante has no server, so nothing is synced or backed up yet. To add cloud backup later,
+send `GoogleIdTokenCredential.idToken` to a backend (for example Firebase Auth) that verifies it.
+
 ## First run on the phone
 
 1. Open Ante and tap **Open Accessibility settings**. Find **Ante app limits** and switch it on.
@@ -54,7 +81,7 @@ How time works:
 - **Payout cap:** a payout can never be more than 100× its stake, and a payout with no matching stake is ignored.
 - **Failed rounds:** if a round fails mid-animation, the stake is refunded.
 
-The app uses no AndroidX or other libraries, only the Android framework.
+The app uses only the Android framework, plus AndroidX Credential Manager and Google Identity for sign-in.
 
 ### Returns per table
 
@@ -70,7 +97,7 @@ The app uses no AndroidX or other libraries, only the Android framework.
 
 | Command | What it checks |
 |---|---|
-| `./gradlew test` | 54 JUnit tests: time accounting, JSON codec, tamper-proof clock, and a 120,000-step fuzz of the blocking rules |
+| `./gradlew test` | 60 JUnit tests: time accounting, daily history, JSON codec, tamper-proof clock, and a 120,000-step fuzz of the blocking rules |
 | `node --test web-tests/games.test.js` | 14 tests of game rules and returns (exact slots return, roulette 36/37, simulated blackjack) |
 | `node web-tests/e2e.js` | Full UI run in Chromium with Playwright and the browser mock |
 
@@ -102,4 +129,7 @@ table's header mutes them, and the choice is remembered.
 - **Detection gap:** a few apps open without a normal activity window change, which can delay detection.
 - **No sounds yet.** Haptics are on.
 
-Fonts: Big Shoulders Display and Hanken Grotesk, both under the SIL Open Font License (`assets/web/fonts/OFL.txt`).
+Fonts: Inter, under the SIL Open Font License (`assets/web/fonts/OFL.txt`).
+Design credits: the floating pill navigation and the morphing sign-in are original code, inspired by
+[Skiper UI](https://skiper-ui.com) components 43 (Vercel tooltip) and 21. The card layouts follow
+the look of [shadcn/ui](https://ui.shadcn.com).

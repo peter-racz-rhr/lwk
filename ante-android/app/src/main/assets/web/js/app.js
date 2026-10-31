@@ -7,8 +7,10 @@
   const BLOCK = CTX.mode === "block";
 
   let S = A.state();
+  let ACC = A.account();
   const ui = {
-    view: BLOCK ? "block" : "today",   // today | tables | game | block
+    view: BLOCK ? "block" : ACC.onboarded ? "today" : "welcome", // today | tables | game | history | profile | welcome | block
+    welcomeStep: "signin", range: "week",
     game: null, sheet: null, toast: null,
     stakePkg: BLOCK ? CTX.pkg : null, stake: 300,
     openPick: 300, busy: false, res: null, round: null,
@@ -44,7 +46,7 @@
   const chipFx = () => { haptic("tap"); SFX.play("chip"); };
   const soundBtn = () => `<button class="iconbtn sound" data-a="sound" aria-pressed="${!SFX.muted}" aria-label="${SFX.muted ? "Turn sound on" : "Turn sound off"}">${SFX.muted ? ICON.soundOff : ICON.soundOn}</button>`;
   let waitTimer = null;
-  const refresh = () => { S = A.state(); };
+  const refresh = () => { S = A.state(); ACC = A.account(); };
 
   function toast(msg) {
     ui.toast = msg; paintOverlay();
@@ -60,6 +62,10 @@
     today: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9.5 2.5h5"/></svg>',
     soundOn: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>',
     soundOff: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg>',
+    logo: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.8"/><path d="M8.5 7.5h7v1.2L13 12l2.5 3.3v1.2h-7v-1.2L11 12 8.5 8.7z" fill="currentColor"/></svg>',
+    history: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>',
+    user: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>',
+    google: '<svg viewBox="0 0 48 48" width="20" height="20" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>',
     lock: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="3"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></svg>',
     tables: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><path d="M12 3.5v3M12 17.5v3M3.5 12h3M17.5 12h3"/></svg>',
   };
@@ -99,25 +105,71 @@
   }
 
   /* ---------- views ---------- */
-  function vToday() {
-    const total = S.limits.reduce((a, l) => a + l.leftSec, 0);
-    const date = new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" });
-    const health = !S.accessibility ? "" : !S.watching ? `
-      <section class="panel perm"><h2 class="h3">Blocking isn't running</h2>
-        <p class="muted">The switch is on, but Android stopped Ante's watcher. Switch <b>Ante app limits</b> off and on again.</p>
-        <button class="btn primary" data-a="settingsGo" data-go="acc">Open Accessibility settings</button></section>`
-      : `<div class="status"><span class="dot"></span><span>Blocking is on${S.strict ? " · Strict mode" : ""}</span></div>
-      ${S.batteryOk === false ? `<section class="panel tip"><h2 class="h3">Keep Ante awake</h2><p class="muted">Some phones put apps to sleep to save battery, which stops blocking. Let Ante run in the background.</p><button class="btn quiet" data-a="settingsGo" data-go="battery">Allow background use</button></section>` : ""}
-      ${S.autoTime === false ? `<section class="panel tip"><h2 class="h3">Date & time is set by hand</h2><p class="muted">Ante keeps its own clock, so changing the date won't refill budgets. Time while the phone is switched off isn't counted towards midnight. Turn on automatic date & time to fix that.</p><button class="btn quiet" data-a="settingsGo" data-go="date">Open Date & time</button></section>` : ""}`;
-    const strict = !S.accessibility ? "" : `
-      <section class="panel strict" aria-labelledby="strict-h">
-        <div class="panel-head"><h2 class="h3" id="strict-h">${ICON.lock} Strict mode</h2>
-          <button class="switch" role="switch" aria-checked="${!!S.strict}" data-a="${S.strict ? "strictOff" : "strictOn"}" aria-labelledby="strict-h"><i></i></button></div>
-        <p class="muted">${S.strict ? "Settings and uninstalling are covered. Getting in, or turning this off, takes a 30-second wait." : "Covers Settings and the uninstall screen too, so blocking can't be switched off on impulse."}</p>
-      </section>`;
-    const perm = S.accessibility ? "" : `
+  /* ---------- time + chart helpers ---------- */
+  const localKey = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  function fmtH(sec) { // 1h 12m / 34m / 0m, for charts and totals
+    sec = Math.max(0, Math.round(sec));
+    const h = Math.floor(sec / 3600), m = Math.round((sec % 3600) / 60);
+    return h ? `${h}h ${pad(m)}m` : `${m}m`;
+  }
+  function resetsIn() {
+    const now = new Date(), mid = new Date(now); mid.setHours(24, 0, 0, 0);
+    return fmtH((mid - now) / 1000);
+  }
+  const todayTotals = () => {
+    const won = S.ledger.filter(b => b.deltaSec > 0).reduce((a, b) => a + b.deltaSec, 0);
+    const lost = S.ledger.filter(b => b.deltaSec < 0).reduce((a, b) => a - b.deltaSec, 0);
+    return { used: S.usedTodaySec || 0, won, lost };
+  };
+  /** Last n days, oldest first; days with no record count as zero. */
+  function lastDays(n) {
+    const map = new Map((S.history || []).map(h => [h.day, h]));
+    const out = [], t = todayTotals();
+    for (let i = n - 1; i >= 0; i--) {
+      const d = new Date(); d.setDate(d.getDate() - i);
+      const h = i === 0 ? { usedSec: t.used, wonSec: t.won, lostSec: t.lost } : map.get(localKey(d)) || { usedSec: 0, wonSec: 0, lostSec: 0 };
+      out.push({ date: d, used: h.usedSec, won: h.wonSec, lost: h.lostSec, today: i === 0 });
+    }
+    return out;
+  }
+  function lastMonths(n) {
+    const days = lastDays(186), out = [];
+    for (let i = n - 1; i >= 0; i--) {
+      const ref = new Date(); ref.setDate(1); ref.setMonth(ref.getMonth() - i);
+      const inMonth = days.filter(d => d.date.getMonth() === ref.getMonth() && d.date.getFullYear() === ref.getFullYear());
+      out.push({ date: ref, used: inMonth.reduce((a, d) => a + d.used, 0), days: inMonth.filter(d => d.used > 0).length, today: i === 0 });
+    }
+    return out;
+  }
+  function bars(items, label) {
+    const max = Math.max(1, ...items.map(i => i.used));
+    return `<div class="bars" role="img" aria-label="${esc(items.map(i => `${label(i)} ${fmtH(i.used)}`).join(", "))}">${items.map(i => {
+      const h = i.used ? Math.max(8, (i.used / max) * 100) : 3;
+      return `<div class="bar-col"><div class="bar ${i.today ? "now" : ""} ${i.used ? "" : "zero"}" style="height:${h.toFixed(1)}%"><span class="bar-tip num">${fmtH(i.used)}</span></div><span class="bar-x">${label(i)}</span></div>`;
+    }).join("")}</div>`;
+  }
+  const dayLabel = i => i.date.toLocaleDateString(undefined, { weekday: "short" }).slice(0, 3);
+  const monthLabel = i => i.date.toLocaleDateString(undefined, { month: "short" }).slice(0, 3);
+  function trendLine(days) {
+    let run = 0; const pts = days.map(d => (run += d.won - d.lost));
+    const w = 320, h = 120, min = Math.min(0, ...pts), max = Math.max(0, ...pts), span = Math.max(60, max - min);
+    const x = i => (i / (pts.length - 1)) * w, y = v => h - 8 - ((v - min) / span) * (h - 16);
+    const d = pts.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join("");
+    const last = pts[pts.length - 1];
+    return { last, svg: `<svg class="trend" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="Net minutes over the last ${days.length} days, now ${signed(last)}">
+      <defs><linearGradient id="tg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#fafafa" stop-opacity=".18"/><stop offset="1" stop-color="#fafafa" stop-opacity="0"/></linearGradient></defs>
+      <line x1="0" x2="${w}" y1="${y(0).toFixed(1)}" y2="${y(0).toFixed(1)}" class="trend-zero"/>
+      <path d="${d}L${w} ${h}L0 ${h}Z" fill="url(#tg)"/><path d="${d}" class="trend-line"/>
+      <circle cx="${x(pts.length - 1)}" cy="${y(last).toFixed(1)}" r="4" class="trend-dot"/></svg>` };
+  }
+  const initials = n => (n || "").split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join("") || "A";
+
+  /* ---------- views ---------- */
+  function healthBlock() {
+    if (!S.accessibility) return `
       <section class="panel perm" aria-labelledby="perm-h">
-        <h2 class="h3" id="perm-h">Let Ante see which app you open</h2>
+        <span class="pill warn"><i></i>Blocking is off</span>
+        <h2 class="h2" id="perm-h">Let Ante see which app you open</h2>
         <p class="muted">Blocking needs Ante's accessibility switch. Ante only checks which app is in front and never reads your screen.</p>
         <button class="btn primary" data-a="openAcc">Open Accessibility settings</button>
         <details class="help"><summary>The switch is greyed out</summary>
@@ -125,39 +177,164 @@
           <button class="btn quiet" data-a="openInfo">Open App info</button>
         </details>
       </section>`;
+    if (!S.watching) return `
+      <section class="panel perm"><span class="pill bad"><i></i>Not running</span><h2 class="h2">Blocking isn't running</h2>
+        <p class="muted">The switch is on, but Android stopped Ante's watcher. Switch <b>Ante app limits</b> off and on again.</p>
+        <button class="btn primary" data-a="settingsGo" data-go="acc">Open Accessibility settings</button></section>`;
+    return "";
+  }
+
+  function vToday() {
+    const total = S.limits.reduce((a, l) => a + l.leftSec, 0);
+    const date = new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" });
     const rows = S.limits.map(l => {
       const used = Math.max(0, l.limitSec - l.leftSec), bonus = l.leftSec - l.limitSec, out = l.leftSec <= 0;
       const pct = Math.min(100, (used / l.limitSec) * 100);
       const sub = bonus > 0 ? `<span class="win">${signed(bonus)}</span> won on top of ${fmt(l.limitSec)}`
-        : out ? "Locked until midnight" : `${fmt(used)} of ${fmt(l.limitSec)} used`;
+        : out ? "Locked until midnight" : `${Math.round(pct)}% used of ${fmt(l.limitSec)}`;
       return `<button class="limit" data-a="edit" data-pkg="${esc(l.pkg)}" aria-label="${esc(l.label)}, ${fmt(l.leftSec)} left. Edit limit">
         ${appIcon(l.pkg)}
-        <span class="meta"><span class="name">${esc(l.label)}</span><span class="sub">${sub}</span>
-          <span class="meter ${out ? "out" : bonus > 0 ? "bonus" : ""}"><i style="width:${out || bonus > 0 ? 100 : pct}%"></i></span></span>
+        <span class="meta"><span class="name">${esc(l.label)}</span>
+          <span class="meter ${out ? "out" : bonus > 0 ? "bonus" : ""}"><i style="width:${out || bonus > 0 ? 100 : pct}%"></i></span>
+          <span class="sub">${sub}</span></span>
         <span class="left num ${out ? "loss" : ""}">${fmt(l.leftSec)}</span></button>`;
     }).join("");
-    const net = S.ledger.reduce((a, b) => a + b.deltaSec, 0);
-    const ledger = S.ledger.slice(0, 8).map(b => {
-      const t = new Date(b.atMs);
-      return `<div class="slip-row"><span><b>${esc(b.game)}</b> · ${esc(labelOf(b.pkg))}</span><span class="when num">${pad(t.getHours())}:${pad(t.getMinutes())}</span><span class="delta num ${b.deltaSec > 0 ? "win" : b.deltaSec < 0 ? "loss" : ""}">${signed(b.deltaSec)}</span></div>`;
-    }).join("");
+    const week = lastDays(7), t = todayTotals();
+    const allowed = S.limits.reduce((a, l) => a + l.limitSec, 0);
+    const avg = week.reduce((a, d) => a + d.used, 0) / 7;
+    const net = t.won - t.lost;
+    const pill = !S.ledger.length ? `<span class="pill warn"><i></i>No bets yet</span>` : net > 0 ? `<span class="pill good"><i></i>Up today</span>` : net < 0 ? `<span class="pill bad"><i></i>Down today</span>` : `<span class="pill"><i></i>Even</span>`;
+    const status = S.accessibility && S.watching ? `<span class="pill good"><i></i>Blocking is on${S.strict ? " · Strict" : ""}</span>` : "";
     return `<div class="screen" id="screen">
-      <header class="masthead"><span class="mark">Ante</span><span class="muted">${esc(date)}</span></header>
+      <header class="masthead"><span class="mark">${ICON.logo}Ante</span><button class="avatar" data-a="tab" data-t="profile" aria-label="Profile">${esc(initials(ACC.name))}</button></header>
       <section class="hero">
-        <p class="eyebrow">Time left today</p>
+        <p class="muted">${esc(date)}</p>
         <p class="bignum num" aria-label="${fmt(total)} left today">${fmt(total)}</p>
-        <p class="muted">${S.limits.length ? `Across ${S.limits.length} ${S.limits.length === 1 ? "app" : "apps"}. Resets at midnight.` : "Add an app to give it a daily budget."}</p>
+        <div class="hero-row"><span class="muted">${S.limits.length ? `Left across ${S.limits.length} ${S.limits.length === 1 ? "app" : "apps"} · resets in ${resetsIn()}` : "Add an app to give it a daily budget."}</span>${status}</div>
       </section>
-      ${perm}${health}
+      ${healthBlock()}
+      <section class="panel card-chart" aria-labelledby="st-h">
+        <div><h2 class="h3" id="st-h">Screen time</h2><p class="muted">Last 7 days in limited apps</p></div>
+        ${bars(week, dayLabel)}
+        <div class="tiles">
+          <div class="tile-box"><p class="eyebrow">Today</p><p class="tile-v num">${fmtH(t.used)}</p><p class="muted">of ${fmtH(allowed)} allowed</p></div>
+          <div class="tile-box"><p class="eyebrow">Daily average</p><p class="tile-v num">${fmtH(avg)}</p><p class="muted">this week</p></div>
+        </div>
+        <div class="card-foot"><button class="btn soft" data-a="tab" data-t="history">View full history</button></div>
+      </section>
       <section class="panel" aria-labelledby="lim-h">
-        <div class="panel-head"><h2 class="h3" id="lim-h">Limits</h2><button class="link" data-a="add">${ICON.plus}Add app</button></div>
+        <div class="panel-head"><div><h2 class="h3" id="lim-h">Limits</h2><p class="muted">Daily budgets for today</p></div><button class="btn-sm" data-a="add">${ICON.plus}Add app</button></div>
         ${rows ? `<div class="limits">${rows}</div>` : `<div class="empty"><p class="muted">No limits yet. Pick an app you open too often and give it a daily budget.</p><button class="btn primary" data-a="add">Add an app</button></div>`}
       </section>
-      ${strict}
-      <section class="panel slip" aria-labelledby="slip-h">
-        <div class="panel-head"><h2 class="h3" id="slip-h">Bets today</h2>${S.ledger.length ? `<span class="num ${net > 0 ? "win" : net < 0 ? "loss" : "muted"}">${signed(net)}</span>` : ""}</div>
-        ${ledger || `<p class="muted">No bets yet. Stake minutes at the tables.</p>`}
+      <section class="panel card-balance" aria-labelledby="wl-h">
+        <p class="muted" id="wl-h">Net minutes today</p>
+        <p class="balance num ${net > 0 ? "win" : net < 0 ? "loss" : ""}">${signed(net)}</p>
+        ${pill}
+        <div class="ledger-box">
+          <div class="lrow"><span>Won at the tables</span><span class="num">${signed(t.won)}</span></div>
+          <div class="lrow"><span>Lost at the tables</span><span class="num">${t.lost ? signed(-t.lost) : signed(0)}</span></div>
+          <div class="lrow total"><span>Net today</span><span class="num">${signed(net)}</span></div>
+        </div>
+        <p class="card-note">Wins go back to the app you staked from. Every table keeps a small edge, so over time the house wins and you scroll less.</p>
       </section>
+    </div>`;
+  }
+
+  function vHistory() {
+    const range = ui.range || "week";
+    const items = range === "week" ? lastDays(7) : lastMonths(6);
+    const days30 = lastDays(30);
+    const total = items.reduce((a, i) => a + i.used, 0);
+    const activeDays = range === "week" ? 7 : Math.max(1, lastDays(183).length);
+    const tr = trendLine(days30);
+    const won30 = days30.reduce((a, d) => a + d.won, 0), lost30 = days30.reduce((a, d) => a + d.lost, 0);
+    const recent = S.ledger.slice(0, 10).map(b => {
+      const t = new Date(b.atMs), g = G.GAMES.find(x => x.name === b.game);
+      return `<div class="txn"><span class="txn-ic" aria-hidden="true">${g ? FX.GAME_ICON(g.id) : ICON.tables}</span>
+        <span class="txn-m"><b>${esc(b.game)}</b><span class="muted">${esc(labelOf(b.pkg))}</span></span>
+        <span class="muted num txn-t">${pad(t.getHours())}:${pad(t.getMinutes())}</span>
+        <span class="num txn-v ${b.deltaSec > 0 ? "win" : b.deltaSec < 0 ? "loss" : ""}">${signed(b.deltaSec)}</span></div>`;
+    }).join("");
+    return `<div class="screen" id="screen">
+      <header><h1 class="h1">History</h1><p class="muted">Screen time and table results, kept on this phone.</p></header>
+      <section class="panel card-chart" aria-labelledby="h-st">
+        <div class="panel-head"><div><h2 class="h3" id="h-st">Screen time</h2><p class="muted">${range === "week" ? "Last 7 days" : "Last 6 months"}</p></div>
+          <div class="seg-sm" role="group" aria-label="Range"><button data-a="range" data-r="week" aria-pressed="${range === "week"}">7D</button><button data-a="range" data-r="months" aria-pressed="${range !== "week"}">6M</button></div></div>
+        ${bars(items, range === "week" ? dayLabel : monthLabel)}
+        <div class="tiles">
+          <div class="tile-box"><p class="eyebrow">Total</p><p class="tile-v num">${fmtH(total)}</p><p class="muted">${range === "week" ? "this week" : "6 months"}</p></div>
+          <div class="tile-box"><p class="eyebrow">Per day</p><p class="tile-v num">${fmtH(total / activeDays)}</p><p class="muted">on average</p></div>
+        </div>
+      </section>
+      <section class="panel" aria-labelledby="h-net">
+        <div><h2 class="h3" id="h-net">Net minutes</h2><p class="muted">Running total at the tables, last 30 days</p></div>
+        <p class="balance sm num ${tr.last > 0 ? "win" : tr.last < 0 ? "loss" : ""}">${signed(tr.last)}</p>
+        ${tr.svg}
+        <div class="ledger-box"><div class="lrow"><span>Won</span><span class="num">${signed(won30)}</span></div><div class="lrow"><span>Lost</span><span class="num">${lost30 ? signed(-lost30) : signed(0)}</span></div></div>
+      </section>
+      <section class="panel" aria-labelledby="h-bets">
+        <div class="panel-head"><div><h2 class="h3" id="h-bets">Recent bets</h2><p class="muted">Today's rounds</p></div><button class="btn-sm" data-a="tab" data-t="tables">Play</button></div>
+        ${recent ? `<div class="txns">${recent}</div>` : `<p class="muted">No bets today. Results show up here as you play.</p>`}
+      </section>
+    </div>`;
+  }
+
+  function vProfile() {
+    const signedIn = ACC.signedIn;
+    const row = (label, value, tone, go, cta) => `<div class="srow"><span class="srow-l">${label}</span><span class="pill ${tone}"><i></i>${value}</span>${go ? `<button class="btn-sm" data-a="settingsGo" data-go="${go}">${cta}</button>` : ""}</div>`;
+    return `<div class="screen" id="screen">
+      <header><h1 class="h1">Profile</h1><p class="muted">Account, blocking and Strict mode.</p></header>
+      <section class="panel" aria-labelledby="acc-h">
+        <div class="acct"><span class="avatar lg" aria-hidden="true">${esc(initials(ACC.name))}</span>
+          <div class="acct-m"><h2 class="h3" id="acc-h">${signedIn ? esc(ACC.name || "Google account") : "Not signed in"}</h2><p class="muted">${signedIn ? esc(ACC.email) : "Your limits work without an account."}</p></div></div>
+        ${signedIn ? `<button class="btn quiet" data-a="signOut">Sign out</button>` : `<button class="btn google" data-a="google">${ICON.google}Sign in with Google</button><p class="auth-msg" id="auth-msg" role="status"></p>`}
+      </section>
+      <section class="panel" aria-labelledby="hl-h">
+        <div><h2 class="h3" id="hl-h">Blocking health</h2><p class="muted">What keeps blocking working on this phone.</p></div>
+        <div class="srows">
+          ${row("Accessibility switch", S.accessibility ? (S.watching ? "Running" : "Stopped") : "Off", S.accessibility && S.watching ? "good" : "bad", S.accessibility && S.watching ? "" : "acc", "Open")}
+          ${row("Background use", S.batteryOk === false ? "Restricted" : "Allowed", S.batteryOk === false ? "warn" : "good", S.batteryOk === false ? "battery" : "", "Allow")}
+          ${row("Date & time", S.autoTime === false ? "Manual" : "Automatic", S.autoTime === false ? "warn" : "good", S.autoTime === false ? "date" : "", "Open")}
+        </div>
+      </section>
+      ${!S.accessibility ? "" : `
+      <section class="panel strict" aria-labelledby="strict-h">
+        <div class="panel-head"><h2 class="h3" id="strict-h">${ICON.lock} Strict mode</h2>
+          <button class="switch" role="switch" aria-checked="${!!S.strict}" data-a="${S.strict ? "strictOff" : "strictOn"}" aria-labelledby="strict-h"><i></i></button></div>
+        <p class="muted">${S.strict ? "Settings and uninstalling are covered. Getting in, or turning this off, takes a 30-second wait." : "Covers Settings and the uninstall screen too, so blocking can't be switched off on impulse."}</p>
+      </section>`}
+      <p class="fine center">Ante 0.1 · No real money · Your limits and history stay on this phone.</p>
+    </div>`;
+  }
+
+  function vWelcome() {
+    if (ui.welcomeStep === "perm") {
+      return `<div class="screen welcome" id="screen">
+        <div class="w-steps" aria-label="Step 2 of 2"><i class="on"></i><i class="on"></i></div>
+        <div class="w-hero"><h1 class="h1">One switch to turn on</h1><p class="muted">Ante covers an app when its time is up. To do that it needs to know which app is in front.</p></div>
+        <ul class="facts"><li>It only sees the name of the app you open.</li><li>It never reads your screen, what you type or your notifications.</li><li>You can switch it off any time in Settings → Accessibility.</li></ul>
+        <div class="grow"></div>
+        <button class="btn primary" data-a="welcomeAcc">Turn on blocking</button>
+        <button class="btn ghost" data-a="finishWelcome">Do it later</button>
+      </div>`;
+    }
+    return `<div class="screen welcome" id="screen">
+      <div class="w-steps" aria-label="Step 1 of 2"><i class="on"></i><i></i></div>
+      <div class="w-hero"><span class="w-logo" aria-hidden="true">${ICON.logo}</span><h1 class="w-title">Ante</h1>
+        <p class="muted">Give every app a daily budget. When it runs out, the app is covered. Want more? Bet the minutes.</p></div>
+      <div class="grow"></div>
+      <div class="signin" id="signin" data-open="false">
+        <button class="signin-pill" data-a="signinOpen" aria-expanded="false" aria-controls="signin-card">Sign in</button>
+        <div class="signin-card" id="signin-card" role="dialog" aria-label="Sign in">
+          <div class="sheet-head"><h2 class="h2">Sign in</h2><button class="iconbtn" data-a="signinClose" aria-label="Close">${ICON.close}</button></div>
+          <button class="btn google" data-a="google">${ICON.google}Continue with Google</button>
+          <div class="or"><span>or</span></div>
+          <button class="btn quiet" data-a="skipSignin">Continue without an account</button>
+          <p class="auth-msg" id="auth-msg" role="status"></p>
+          <p class="fine">Your limits stay on this phone. Signing in only saves your name and email here.</p>
+        </div>
+      </div>
+      <button class="btn ghost" data-a="skipSignin">Skip for now</button>
     </div>`;
   }
 
@@ -259,13 +436,28 @@
     </div>`;
   }
 
+  /* Floating pill navigation; a label slides above the active tab (after Skiper UI's Vercel tooltip). */
+  let tipX = null, tipUntil = 0, tipFor = null;
   function tabbar() {
-    if (BLOCK) return "";
-    const on = v => (ui.view === v || (v === "tables" && ui.view === "game")) ? "page" : "false";
-    return `<nav class="tabbar" aria-label="Sections">
-      <button data-a="tab" data-t="today" aria-current="${on("today")}" ${ui.busy || ui.round ? "disabled" : ""}>${ICON.today}<span>Today</span></button>
-      <button data-a="tab" data-t="tables" aria-current="${on("tables")}" ${ui.busy || ui.round ? "disabled" : ""}>${ICON.tables}<span>Tables</span></button></nav>`;
+    if (BLOCK || ui.view === "welcome") return "";
+    const tabs = [["today", "Today", ICON.today], ["tables", "Tables", ICON.tables], ["history", "History", ICON.history], ["profile", "Profile", ICON.user]];
+    const cur = ui.view === "game" ? "tables" : ui.view;
+    const needsCare = !S.accessibility || !S.watching || S.batteryOk === false;
+    const lock = ui.busy || ui.round ? "disabled" : "";
+    return `<nav class="navpill" aria-label="Sections"><span class="navtip" aria-hidden="true"></span>${tabs.map(([t, l, ic]) =>
+      `<button data-a="tab" data-t="${t}" aria-label="${l}" aria-current="${cur === t ? "page" : "false"}" ${lock}>${ic}${t === "profile" && needsCare ? '<i class="ndot"></i>' : ""}</button>`).join("")}</nav>`;
   }
+  function placeTip(target) {
+    const nav = $app.querySelector(".navpill"); if (!nav) return;
+    const btn = target || nav.querySelector('[aria-current="page"]'), tip = nav.querySelector(".navtip");
+    if (!btn || !tip) return;
+    const x = btn.offsetLeft + btn.offsetWidth / 2;
+    tip.textContent = btn.getAttribute("aria-label");
+    if (tipX != null) { tip.style.transition = "none"; tip.style.left = tipX + "px"; void tip.offsetWidth; tip.style.transition = ""; }
+    tip.style.left = x + "px"; tipX = x;
+    tip.classList.toggle("show", Date.now() < tipUntil || !!target);
+  }
+
 
   /* ---------- sheets ---------- */
   /* A wait the native side times (30 s). Shows a countdown, then unlocks the action. */
@@ -378,8 +570,9 @@
     if (ui.view === "game" && mountedKey === "game:" + ui.game) { renderControls(); paintOverlay(); return; }
     const scroller = document.getElementById("screen");
     const keep = scroller && mountedKey === ui.view ? scroller.scrollTop : 0;
-    const body = ui.view === "block" ? vBlock() : ui.view === "tables" ? vTables() : ui.view === "game" ? vGame() : vToday();
-    $app.innerHTML = body + tabbar();
+    const body = ({ block: vBlock, tables: vTables, game: vGame, history: vHistory, profile: vProfile, welcome: vWelcome })[ui.view] || vToday;
+    $app.innerHTML = body() + tabbar();
+    placeTip();
     $app.dataset.view = ui.view;
     const s2 = document.getElementById("screen"); if (s2 && keep) s2.scrollTop = keep;
     if (table && table.destroy) table.destroy();
@@ -389,9 +582,10 @@
     paintOverlay();
   }
   function renderNav() {
-    const nav = $app.querySelector(".tabbar"); if (!nav) return;
+    const nav = $app.querySelector(".navpill"); if (!nav) return;
     const tmp = document.createElement("div"); tmp.innerHTML = tabbar();
     nav.replaceWith(tmp.firstElementChild);
+    placeTip();
     const back = $app.querySelector('[data-a="leave"]'); if (back) back.disabled = !!(ui.busy || ui.round);
   }
 
@@ -602,10 +796,23 @@
 
   /* ---------- actions ---------- */
   const ACT = {
-    tab(d) { ui.view = d.t; ui.game = null; render(); },
+    tab(d) { tipUntil = Date.now() + 1200; ui.view = d.t; ui.game = null; render(); setTimeout(() => placeTip(), 1250); },
+    range(d) { ui.range = d.r; chipFx(); render(); },
+    signinOpen() { morphSignin(true); },
+    signinClose() { morphSignin(false); },
+    google() {
+      const msg = document.getElementById("auth-msg"); if (msg) msg.textContent = "Opening Google…";
+      A.signInWithGoogle();
+    },
+    skipSignin() { ui.welcomeStep = "perm"; render(); },
+    welcomeAcc() { ui.sheet = { type: "consent", fromWelcome: true }; paintOverlay(); },
+    finishWelcome() { A.finishOnboarding(); refresh(); ui.view = "today"; render(); },
+    signOut() { A.signOut(); refresh(); render(); toast("Signed out. Your limits are still here."); },
     openAcc() { ui.sheet = { type: "consent" }; paintOverlay(); },
     agreeAcc() {
+      const fromWelcome = ui.sheet && ui.sheet.fromWelcome;
       ui.sheet = null; paintOverlay();
+      if (fromWelcome) { A.finishOnboarding(); ui.view = "today"; }
       if (A.openAccessibilitySettings() === false) { ACT.settingsGo({ go: "acc" }); return; }
       setTimeout(() => { refresh(); render(); }, 300);
     },
@@ -683,6 +890,8 @@
     if (fn) fn(el.dataset, el);
   }
   $app.addEventListener("click", onClick);
+  $app.addEventListener("pointerover", e => { const b = e.target.closest(".navpill button"); if (b && e.pointerType === "mouse") placeTip(b); });
+  $app.addEventListener("pointerout", e => { const b = e.target.closest(".navpill button"); if (b && e.pointerType === "mouse") placeTip(); });
   $overlay.addEventListener("click", onClick);
   $overlay.addEventListener("input", e => {
     if (e.target.id === "app-search" && ui.sheet) { ui.sheet.q = e.target.value; paintOverlay(); }
@@ -694,9 +903,43 @@
     if (ui.sheet) { ui.sheet = null; paintOverlay(); return true; }
     if (ui.view === "game") { if (!ui.busy && !ui.round) { ui.view = "tables"; ui.game = null; render(); } return true; }
     if (BLOCK && ui.view === "tables") { ui.view = "block"; render(); return true; }
-    if (!BLOCK && ui.view === "tables") { ui.view = "today"; render(); return true; }
+    if (!BLOCK && ["tables", "history", "profile"].includes(ui.view)) { ui.view = "today"; render(); return true; }
+    if (ui.view === "welcome" && ui.welcomeStep === "perm") { ui.welcomeStep = "signin"; render(); return true; }
+    if (ui.view === "welcome" && document.querySelector('#signin[data-open="true"]')) { morphSignin(false); return true; }
     return false;
   };
+  /* Result of Google sign-in from the native side (a JSON string). */
+  window.anteAuth = function (raw) {
+    let r; try { r = typeof raw === "string" ? JSON.parse(raw) : raw; } catch (e) { r = { ok: false, message: "Sign-in failed." }; }
+    refresh();
+    if (r && r.ok) {
+      toast(`Signed in as ${r.name || r.email}.`);
+      if (ui.view === "welcome") ui.welcomeStep = "perm";
+      render();
+    } else {
+      const msg = document.getElementById("auth-msg");
+      const text = (r && r.message) || "Sign-in failed.";
+      if (msg) msg.textContent = r && r.error === "cancelled" ? "" : text; else toast(text);
+    }
+  };
+
+  /* Sign-in pill that grows into the sign-in card (after Skiper UI's sign-in), and back. */
+  function morphSignin(open) {
+    const box = document.getElementById("signin"); if (!box) return;
+    const card = box.querySelector(".signin-card"), pill = box.querySelector(".signin-pill");
+    const from = box.getBoundingClientRect();
+    box.dataset.open = String(open);
+    pill.setAttribute("aria-expanded", String(open));
+    // Lay the card out at its final width first, so the measured height is the real one.
+    card.style.width = (box.parentElement.clientWidth - 32) + "px";
+    const toH = open ? card.scrollHeight : 48;
+    box.style.height = from.height + "px";
+    void box.offsetWidth;
+    box.style.height = toH + "px";
+    if (open) { SFX.play("tap"); setTimeout(() => { const g = card.querySelector(".google"); if (g) g.focus(); }, 380); }
+    else setTimeout(() => pill.focus(), 380);
+  }
+
   window.anteRefresh = function () {
     if (BLOCK && ui.view === "block") startBreath();
     if (ui.busy || ui.round) return;

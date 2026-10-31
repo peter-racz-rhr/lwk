@@ -36,9 +36,9 @@
   }
 
   const SLOT_ART = {
-    seven: `<svg viewBox="0 0 64 64" aria-label="Seven"><text x="32" y="53" text-anchor="middle" font-family="'Big Shoulders Display', Impact, sans-serif" font-weight="800" font-size="58" fill="var(--red)" stroke="var(--brass)" stroke-width="2" paint-order="stroke">7</text></svg>`,
-    bar: `<svg viewBox="0 0 64 64" aria-label="Bar"><rect x="5" y="20" width="54" height="24" rx="6" fill="#141716" stroke="var(--brass)" stroke-width="2.5"/><text x="32" y="39" text-anchor="middle" font-family="'Big Shoulders Display', Impact, sans-serif" font-weight="800" font-size="19" letter-spacing="2" fill="var(--ivory)">BAR</text></svg>`,
-    bell: `<svg viewBox="0 0 64 64" aria-label="Bell"><path d="M32 8c-2 0-3 1-3 3v2c-9 2-14 10-14 19v9l-5 6v3h44v-3l-5-6v-9c0-9-5-17-14-19v-2c0-2-1-3-3-3z" fill="var(--brass)"/><path d="M24 22c-3 3-4 7-4 11v7" stroke="#F6E2AE" stroke-width="3" fill="none" stroke-linecap="round"/><circle cx="32" cy="54" r="5" fill="var(--brass-deep)"/></svg>`,
+    seven: `<svg viewBox="0 0 64 64" aria-label="Seven"><text x="32" y="53" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-weight="700" font-size="54" fill="var(--red)" stroke="#ffffff" stroke-width="2" paint-order="stroke">7</text></svg>`,
+    bar: `<svg viewBox="0 0 64 64" aria-label="Bar"><rect x="5" y="20" width="54" height="24" rx="6" fill="#111111" stroke="var(--brass)" stroke-width="2.5"/><text x="32" y="39" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-weight="800" font-size="19" letter-spacing="2" fill="var(--ivory)">BAR</text></svg>`,
+    bell: `<svg viewBox="0 0 64 64" aria-label="Bell"><path d="M32 8c-2 0-3 1-3 3v2c-9 2-14 10-14 19v9l-5 6v3h44v-3l-5-6v-9c0-9-5-17-14-19v-2c0-2-1-3-3-3z" fill="var(--brass)"/><path d="M24 22c-3 3-4 7-4 11v7" stroke="#fafafa" stroke-width="3" fill="none" stroke-linecap="round"/><circle cx="32" cy="54" r="5" fill="var(--brass-deep)"/></svg>`,
     diamond: `<svg viewBox="0 0 64 64" aria-label="Diamond"><path d="M14 22 24 10h16l10 12-18 32z" fill="#BFE6E0"/><path d="M14 22h36L32 54z" fill="#8CCFC6"/><path d="M24 10l-4 12h24l-4-12" fill="#E6FAF6"/><path d="M14 22 24 10h16l10 12-18 32z" fill="none" stroke="#2C6F66" stroke-width="1.5"/></svg>`,
     cherry: `<svg viewBox="0 0 64 64" aria-label="Cherries"><path d="M34 8c-6 8-12 18-14 30M34 8c4 10 8 18 12 32" stroke="#3F7D3A" stroke-width="3.5" fill="none" stroke-linecap="round"/><path d="M34 8c6-2 12 0 16 5-6 2-12 1-16-5z" fill="#5FA052"/><circle cx="19" cy="44" r="11" fill="var(--red)"/><circle cx="46" cy="44" r="11" fill="var(--red)"/><circle cx="15" cy="40" r="3" fill="#F2B3A8"/><circle cx="42" cy="40" r="3" fill="#F2B3A8"/></svg>`,
   };
@@ -51,11 +51,11 @@
       for (let i = 0; i < 37; i++) {
         const a0 = (i / 37) * Math.PI * 2 - Math.PI / 2, a1 = ((i + 1) / 37) * Math.PI * 2 - Math.PI / 2;
         const c = G.pocketColor(G.WHEEL[i]);
-        const fill = c === "green" ? "var(--zero)" : c === "red" ? "var(--red)" : "#141716";
+        const fill = c === "green" ? "var(--zero)" : c === "red" ? "var(--red)" : "#111111";
         const p = (r, a) => `${(50 + r * Math.cos(a)).toFixed(2)} ${(50 + r * Math.sin(a)).toFixed(2)}`;
         wedges += `<path d="M${p(44, a0)}A44 44 0 0 1 ${p(44, a1)}L${p(30, a1)}A30 30 0 0 0 ${p(30, a0)}z" fill="${fill}"/>`;
       }
-      return `<svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="49" fill="#2A1A10" stroke="var(--brass)" stroke-width="1.5"/>${wedges}<circle cx="50" cy="50" r="30" fill="var(--felt-deep)"/><circle cx="50" cy="50" r="7" fill="var(--brass)"/><path d="M50 32v36M32 50h36" stroke="var(--brass)" stroke-width="2.5" stroke-linecap="round"/><circle cx="72" cy="22" r="3.4" fill="var(--ivory)"/></svg>`;
+      return `<svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="49" fill="#1a1a1a" stroke="var(--line-2)" stroke-width="1.5"/>${wedges}<circle cx="50" cy="50" r="30" fill="var(--felt-deep)"/><circle cx="50" cy="50" r="7" fill="var(--brass)"/><path d="M50 32v36M32 50h36" stroke="var(--brass)" stroke-width="2.5" stroke-linecap="round"/><circle cx="72" cy="22" r="3.4" fill="var(--ivory)"/></svg>`;
     },
     blackjack: () => `<div class="mini-cards">${cardHtml({ r: 1, s: 0 }, true)}${cardHtml({ r: 13, s: 1 }, true)}</div>`,
     slots: () => `<div class="mini-reels">${["seven", "seven", "seven"].map(s => `<span>${slotSvg(s)}</span>`).join("")}</div>`,
@@ -65,8 +65,8 @@
 
   function coinFace(side) {
     return side === "H"
-      ? `<svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="48" fill="var(--brass)"/><circle cx="50" cy="50" r="41" fill="none" stroke="var(--brass-deep)" stroke-width="2" stroke-dasharray="3 4"/><circle cx="50" cy="50" r="34" fill="#E6C784"/><text x="50" y="64" text-anchor="middle" font-family="'Big Shoulders Display', Impact, sans-serif" font-weight="800" font-size="40" fill="var(--brass-ink)">H</text></svg>`
-      : `<svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="48" fill="#C9A35C"/><circle cx="50" cy="50" r="41" fill="none" stroke="var(--brass-deep)" stroke-width="2" stroke-dasharray="3 4"/><circle cx="50" cy="50" r="34" fill="#D9B56E"/><path d="M38 30h24v4l-9 16 9 16v4H38v-4l9-16-9-16z" fill="var(--brass-ink)"/><text x="50" y="92" text-anchor="middle" font-family="'Big Shoulders Display', Impact, sans-serif" font-weight="800" font-size="9" letter-spacing="2" fill="var(--brass-ink)">T</text></svg>`;
+      ? `<svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="48" fill="var(--brass)"/><circle cx="50" cy="50" r="41" fill="none" stroke="var(--brass-deep)" stroke-width="2" stroke-dasharray="3 4"/><circle cx="50" cy="50" r="34" fill="#e5e5e5"/><text x="50" y="64" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-weight="800" font-size="40" fill="var(--brass-ink)">H</text></svg>`
+      : `<svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="48" fill="#a3a3a3"/><circle cx="50" cy="50" r="41" fill="none" stroke="var(--brass-deep)" stroke-width="2" stroke-dasharray="3 4"/><circle cx="50" cy="50" r="34" fill="#d4d4d4"/><path d="M38 30h24v4l-9 16 9 16v4H38v-4l9-16-9-16z" fill="var(--brass-ink)"/><text x="50" y="92" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-weight="800" font-size="9" letter-spacing="2" fill="var(--brass-ink)">T</text></svg>`;
   }
 
   /* ---------- particles ---------- */
@@ -81,7 +81,7 @@
     host.appendChild(cv);
     const ctx = cv.getContext("2d");
     ctx.scale(dpr, dpr);
-    const colors = ["#D9B56E", "#F2EAD8", "#E6C784", "#9C7B3C"];
+    const colors = ["#d4d4d4", "#F2EAD8", "#e5e5e5", "#737373"];
     const ps = Array.from({ length: o.count }, () => {
       const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.2;
       const v = (5 + Math.random() * 7) * o.power;
@@ -204,16 +204,16 @@
     function drawStator() {
       const [c, x] = off();
       const wood = x.createRadialGradient(0, 0, R * 0.8, 0, 0, R);
-      wood.addColorStop(0, "#1E120A"); wood.addColorStop(0.5, "#3B2416"); wood.addColorStop(1, "#24150C");
+      wood.addColorStop(0, "#0d0d0d"); wood.addColorStop(0.5, "#262626"); wood.addColorStop(1, "#141414");
       ring(x, R * 0.9, R * 0.995, wood);
-      ring(x, R * 0.895, R * 0.91, "#D9B56E");
+      ring(x, R * 0.895, R * 0.91, "#d4d4d4");
       const track = x.createRadialGradient(0, 0, R * 0.78, 0, 0, R * 0.9);
-      track.addColorStop(0, "#0B0F0E"); track.addColorStop(0.6, "#1B2422"); track.addColorStop(1, "#0D1312");
+      track.addColorStop(0, "#0a0a0a"); track.addColorStop(0.6, "#1c1c1c"); track.addColorStop(1, "#0d0d0d");
       ring(x, R * 0.79, R * 0.895, track);
       // ball deflectors
       for (let i = 0; i < 8; i++) {
         const a = (i / 8) * Math.PI * 2 + 0.2;
-        x.save(); x.rotate(a); x.fillStyle = "#B8954F";
+        x.save(); x.rotate(a); x.fillStyle = "#a3a3a3";
         x.beginPath(); x.moveTo(R * 0.815, -3); x.lineTo(R * 0.86, 0); x.lineTo(R * 0.815, 3); x.closePath(); x.fill();
         x.restore();
       }
@@ -225,38 +225,38 @@
         const n = G.WHEEL[i], col = G.pocketColor(n);
         const a0 = i * STEP - STEP / 2 - Math.PI / 2, a1 = a0 + STEP;
         x.beginPath(); x.arc(0, 0, R * 0.79, a0, a1); x.arc(0, 0, R * 0.6, a1, a0, true); x.closePath();
-        x.fillStyle = col === "green" ? "#1F7A4F" : col === "red" ? "#B83A2E" : "#141716";
+        x.fillStyle = col === "green" ? "#1F7A4F" : col === "red" ? "#B83A2E" : "#111111";
         x.fill();
         // number
         x.save(); x.rotate(i * STEP);
         x.fillStyle = "#F2EAD8";
-        x.font = `700 ${Math.round(R * 0.085)}px 'Big Shoulders Display', Impact, sans-serif`;
+        x.font = `700 ${Math.round(R * 0.085)}px Inter, Arial, sans-serif`;
         x.textAlign = "center"; x.textBaseline = "middle";
         x.fillText(String(n), 0, -R * 0.735);
         x.restore();
       }
       // pocket frets
-      x.strokeStyle = "#C9A35C"; x.lineWidth = 1.2;
+      x.strokeStyle = "#a3a3a3"; x.lineWidth = 1.2;
       for (let i = 0; i < N; i++) {
         const a = i * STEP - STEP / 2 - Math.PI / 2;
         x.beginPath(); x.moveTo(Math.cos(a) * R * 0.6, Math.sin(a) * R * 0.6); x.lineTo(Math.cos(a) * R * 0.79, Math.sin(a) * R * 0.79); x.stroke();
       }
-      x.beginPath(); x.arc(0, 0, R * 0.69, 0, Math.PI * 2); x.strokeStyle = "rgba(201,163,92,.55)"; x.lineWidth = 1; x.stroke();
+      x.beginPath(); x.arc(0, 0, R * 0.69, 0, Math.PI * 2); x.strokeStyle = "rgba(255,255,255,.3)"; x.lineWidth = 1; x.stroke();
       // cone
       const cone = x.createRadialGradient(-R * 0.1, -R * 0.12, R * 0.05, 0, 0, R * 0.6);
-      cone.addColorStop(0, "#3A6B5A"); cone.addColorStop(0.55, "#1C4136"); cone.addColorStop(1, "#0F2620");
+      cone.addColorStop(0, "#3a3a3a"); cone.addColorStop(0.55, "#1f1f1f"); cone.addColorStop(1, "#111111");
       x.beginPath(); x.arc(0, 0, R * 0.6, 0, Math.PI * 2); x.fillStyle = cone; x.fill();
-      x.beginPath(); x.arc(0, 0, R * 0.6, 0, Math.PI * 2); x.strokeStyle = "#C9A35C"; x.lineWidth = 2; x.stroke();
+      x.beginPath(); x.arc(0, 0, R * 0.6, 0, Math.PI * 2); x.strokeStyle = "#a3a3a3"; x.lineWidth = 2; x.stroke();
       // turret
-      x.strokeStyle = "#D9B56E"; x.lineCap = "round"; x.lineWidth = R * 0.035;
+      x.strokeStyle = "#d4d4d4"; x.lineCap = "round"; x.lineWidth = R * 0.035;
       for (let k = 0; k < 4; k++) {
         x.save(); x.rotate((k * Math.PI) / 2);
         x.beginPath(); x.moveTo(0, 0); x.lineTo(0, -R * 0.3); x.stroke();
-        x.beginPath(); x.arc(0, -R * 0.3, R * 0.04, 0, Math.PI * 2); x.fillStyle = "#E6C784"; x.fill();
+        x.beginPath(); x.arc(0, -R * 0.3, R * 0.04, 0, Math.PI * 2); x.fillStyle = "#e5e5e5"; x.fill();
         x.restore();
       }
       const knob = x.createRadialGradient(-R * 0.03, -R * 0.03, 1, 0, 0, R * 0.09);
-      knob.addColorStop(0, "#F6E2AE"); knob.addColorStop(1, "#9C7B3C");
+      knob.addColorStop(0, "#fafafa"); knob.addColorStop(1, "#737373");
       x.beginPath(); x.arc(0, 0, R * 0.09, 0, Math.PI * 2); x.fillStyle = knob; x.fill();
       return c;
     }
@@ -270,7 +270,7 @@
         x.scale(dpr, dpr);
         const a0 = highlight * STEP - STEP / 2 - Math.PI / 2;
         x.beginPath(); x.arc(0, 0, R * 0.795, a0, a0 + STEP); x.arc(0, 0, R * 0.595, a0 + STEP, a0, true); x.closePath();
-        x.strokeStyle = "#F6E2AE"; x.lineWidth = 2.5; x.stroke();
+        x.strokeStyle = "#fafafa"; x.lineWidth = 2.5; x.stroke();
       }
       x.restore();
       if (showBall) {
@@ -467,5 +467,14 @@
     };
   }
 
-  window.AnteFX = { cardHtml, slotSvg, coinFace, GAME_ART, suitSvg, burst, countUp, wait, Coin, Roulette, Slots, Blackjack, Poker, reduced };
+  /* Small monochrome icons per game, for lists. */
+  const GAME_ICON = id => ({
+    roulette: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5"/><path d="M12 3v5.5M12 15.5V21M3 12h5.5M15.5 12H21"/></svg>',
+    blackjack: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="11" height="15" rx="2.5" transform="rotate(-8 8.5 12.5)"/><rect x="10" y="4" width="11" height="15" rx="2.5" transform="rotate(8 15.5 11.5)"/></svg>',
+    slots: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M9 5v14M15 5v14"/></svg>',
+    poker: '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M12 3C9 7 5 9 5 13a3.5 3.5 0 0 0 6 2.4c-.3 2-1 3.3-2.3 4.6h6.6c-1.3-1.3-2-2.6-2.3-4.6A3.5 3.5 0 0 0 19 13c0-4-4-6-7-10z"/></svg>',
+    coin: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5.5"/></svg>',
+  })[id] || "";
+
+  window.AnteFX = { GAME_ICON, cardHtml, slotSvg, coinFace, GAME_ART, suitSvg, burst, countUp, wait, Coin, Roulette, Slots, Blackjack, Poker, reduced };
 })();

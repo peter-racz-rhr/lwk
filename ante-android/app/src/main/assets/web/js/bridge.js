@@ -24,6 +24,10 @@
       openAccessibilitySettings: () => N.openAccessibilitySettings(),
       openAppInfo: () => N.openAppInfo(),
       haptic: kind => { try { N.haptic(kind); } catch (e) { /* older bridge */ } },
+      account: () => parse(N.account(), { signedIn: false, onboarded: true }),
+      signInWithGoogle: () => N.signInWithGoogle(),
+      signOut: () => N.signOut(),
+      finishOnboarding: () => N.finishOnboarding(),
       startWait: () => N.startWait(),
       waitLeftMs: () => Number(N.waitLeftMs()),
       setStrict: on => N.setStrict(!!on),
@@ -51,6 +55,19 @@
   const apps = SAMPLE_APPS.map(([pkg, label], i) => ({ pkg, label, icon: monogram(label, HUES[i % HUES.length]) }));
   const today = () => new Date().toISOString().slice(0, 10);
 
+  /* Sample past days so the charts have something to show in the browser. Deterministic. */
+  function sampleHistory() {
+    const out = [];
+    for (let i = 1; i <= 180; i++) {
+      const d = new Date(); d.setDate(d.getDate() - i);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      const wave = Math.sin(i / 9) * 900 + Math.sin(i / 2.3) * 500;
+      const used = Math.max(0, Math.round(3000 + wave + ((i * 7919) % 1300) - Math.min(i, 60) * -8));
+      const won = (i * 37) % 5 === 0 ? 300 + (i % 4) * 120 : 0, lost = (i * 13) % 3 === 0 ? 300 : 60;
+      out.push({ day: key, usedSec: used, wonSec: won, lostSec: lost });
+    }
+    return out;
+  }
   function fresh() {
     const now = Date.now();
     return {
@@ -68,17 +85,25 @@
       session: null,
       parked: {},
       strict: false,
+      usedTodaySec: 2160,
+      history: sampleHistory(),
     };
   }
   let S;
   try { S = JSON.parse(localStorage.getItem(KEY)); } catch (e) { S = null; }
   if (!S || !Array.isArray(S.limits) || q.get("reset") === "1") S = fresh();
   if (q.get("acc") === "1") S.accessibility = true;
+  if (!Array.isArray(S.history)) { S.history = sampleHistory(); S.usedTodaySec = S.usedTodaySec || 0; }
   if (S.day !== today()) { S.day = today(); S.limits.forEach(l => { l.leftSec = l.limitSec; }); S.ledger = []; S.parked = {}; }
   const open = {};
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* private mode */ } };
   const lim = pkg => S.limits.find(l => l.pkg === pkg);
   const ctx = { mode: q.get("mode") === "block" ? "block" : "main", pkg: q.get("pkg") || null, note: q.get("note") || null };
+  const AKEY = "ante-mock-account";
+  let ACCT = {};
+  try { ACCT = JSON.parse(localStorage.getItem(AKEY)) || {}; } catch (e) { ACCT = {}; }
+  if (q.get("reset") === "1" || q.get("onboard") === "1") ACCT = {};
+  const saveAcct = () => { try { localStorage.setItem(AKEY, JSON.stringify(ACCT)); } catch (e) { /* private mode */ } };
   const WAIT = q.get("wait") === "1" ? 1000 : 30000;
   let waitStart = 0;
   const say = msg => window.dispatchEvent(new CustomEvent("ante-mock", { detail: msg }));
@@ -139,6 +164,17 @@
     },
     openAppInfo: () => { say("Opens Ante's App info page"); return true; },
     haptic: () => {},
+    // Account. ?onboard=1 shows onboarding; ?google=fail makes sign-in fail.
+    account: () => Object.assign({ signedIn: false, name: "", email: "", onboarded: q.get("onboard") !== "1", googleConfigured: true }, ACCT),
+    signInWithGoogle() {
+      setTimeout(() => {
+        if (q.get("google") === "fail") { window.anteAuth && window.anteAuth(JSON.stringify({ ok: false, error: "no_account", message: "No Google account on this phone. Add one in Settings, then try again." })); return; }
+        Object.assign(ACCT, { signedIn: true, name: "Sample Account", email: "sample.account@gmail.com" }); saveAcct();
+        window.anteAuth && window.anteAuth(JSON.stringify({ ok: true, name: ACCT.name, email: ACCT.email }));
+      }, 500);
+    },
+    signOut() { Object.assign(ACCT, { signedIn: false, name: "", email: "" }); saveAcct(); },
+    finishOnboarding() { ACCT.onboarded = true; saveAcct(); },
     // Strict mode. ?wait=1 shortens the 30 s wait to 1 s for tests.
     startWait: () => { waitStart = Date.now(); },
     waitLeftMs: () => (waitStart ? Math.max(0, waitStart + WAIT - Date.now()) : -1),

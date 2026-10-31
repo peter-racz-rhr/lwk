@@ -21,6 +21,10 @@ object Codec {
         })
         put("parked", JSONObject().apply { s.parked.forEach { (k, v) -> put(k, v) } })
         put("dayStartMs", s.dayStartMs)
+        put("usedTodaySec", s.usedTodaySec)
+        put("history", JSONArray().apply {
+            s.history.forEach { put(JSONObject().put("day", it.day).put("usedSec", it.usedSec).put("wonSec", it.wonSec).put("lostSec", it.lostSec)) }
+        })
         put("strict", s.strict)
         put("settingsPassUntilMs", s.settingsPassUntilMs)
         put("clock", JSONObject().put("wallMs", s.clock.wallMs).put("elapsedMs", s.clock.elapsedMs).put("lastTrustedMs", s.clock.lastTrustedMs).put("bootCount", s.clock.bootCount))
@@ -52,6 +56,11 @@ object Codec {
                     j.keys().asSequence().associateWith { j.optInt(it, 0) }
                 } ?: emptyMap(),
                 dayStartMs = o.optLong("dayStartMs", 0),
+                usedTodaySec = o.optInt("usedTodaySec", 0),
+                history = o.optJSONArray("history").objects().mapNotNull { j ->
+                    val day = j.optString("day", "")
+                    if (day.isEmpty()) null else DaySummary(day, j.optInt("usedSec", 0), j.optInt("wonSec", 0), j.optInt("lostSec", 0))
+                },
                 strict = o.optBoolean("strict", false),
                 settingsPassUntilMs = o.optLong("settingsPassUntilMs", 0),
                 clock = o.optJSONObject("clock")?.let { j ->

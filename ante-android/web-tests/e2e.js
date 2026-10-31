@@ -120,10 +120,11 @@ async function noOverflow(p, label) {
   await shot(p, "12-slots-done");
   await p.click('[data-a="leave"]');
 
-  /* Blackjack */
+  /* Blackjack (from TikTok's untouched budget, so earlier losing streaks can't starve it) */
+  await p.click('[data-a="stakeApp"][data-pkg="com.zhiliaoapp.musically"]');
   await p.click('[data-a="game"][data-id="blackjack"]');
   await p.waitForTimeout(200);
-  await p.click('[data-a="stakeSet"][data-v="300"]');
+  await p.click('[data-a="stakeSet"][data-v="60"]');
   await p.click('[data-a="bjDeal"]');
   await p.waitForFunction(() => document.querySelector('[data-a="bjStand"]') || document.querySelector('[data-a="bjDeal"]:not([disabled])'), null, { timeout: 6000 });
   await shot(p, "13-blackjack-dealt");
@@ -153,7 +154,15 @@ async function noOverflow(p, label) {
   await p.click('[data-a="leave"]');
   await p.click('[data-t="today"]');
   await p.waitForTimeout(200);
-  check((await p.$$(".slip-row")).length >= 5, "bets appear in today's slip");
+  await p.click('[data-t="history"]');
+  await p.waitForTimeout(200);
+  check((await p.$$(".txn")).length >= 5, "bets appear in History's recent bets");
+  await shot(p, "17b-history");
+  await p.click('[data-a="range"][data-r="months"]');
+  check((await p.$$(".bars .bar-col")).length === 6, "history switches to 6 months");
+  await p.click('[data-t="today"]');
+  check((await p.$$(".card-chart .bar-col")).length === 7, "today shows a 7-day screen-time chart");
+  check(await p.isVisible("text=Net minutes today"), "today shows the wins and losses card");
   await shot(p, "17-today-after-bets");
   check(p.errors.length === 0, "no console errors in main flow: " + p.errors.join(" | "));
 
@@ -204,11 +213,13 @@ async function noOverflow(p, label) {
   /* Health tips + strict mode */
   const st = await page(browser, "?acc=1&wait=1&battery=0&reset=1");
   check(await st.isVisible("text=Blocking is on"), "status shows blocking is on");
-  check(await st.isVisible("text=Keep Ante awake"), "battery tip shows when Ante may be put to sleep");
+  check(await st.isVisible(".navpill .ndot"), "profile tab gets a dot when something needs care");
+  await st.click('[data-t="profile"]');
+  check(await st.isVisible("text=Restricted"), "profile flags restricted background use");
   await st.click('[data-a="strictOn"]');
   await st.click('[data-a="agreeStrict"]');
   await st.waitForTimeout(150);
-  check(await st.isVisible("text=Blocking is on · Strict mode"), "strict mode turns on");
+  check(await st.isVisible(".switch[aria-checked=\"true\"]"), "strict mode turns on");
   await shot(st, "23-strict-on");
   await st.click('[data-a="strictOff"]');
   check(await st.isDisabled("#wait-go"), "turning strict off starts disabled behind a wait");
@@ -217,7 +228,7 @@ async function noOverflow(p, label) {
   await st.waitForSelector("#wait-go:not([disabled])", { timeout: 3000 });
   await st.click("#wait-go");
   await st.waitForTimeout(150);
-  check(!(await st.isVisible("text=Blocking is on · Strict mode")), "strict mode turns off after the wait");
+  check(await st.isVisible(".switch[aria-checked=\"false\"]"), "strict mode turns off after the wait");
   check(st.errors.length === 0, "no console errors in strict flow: " + st.errors.join(" | "));
 
   const gs = await page(browser, "?mode=block&pkg=com.android.settings&note=strict&acc=1&wait=1");
@@ -230,6 +241,39 @@ async function noOverflow(p, label) {
   const gi = await page(browser, "?mode=block&pkg=com.google.android.packageinstaller&note=strict&acc=1");
   check(await gi.isVisible("text=Installing and removing apps is locked"), "strict mode covers the uninstaller");
   check(gs.errors.length + gi.errors.length === 0, "no console errors on guard screens");
+
+  /* Onboarding: morphing sign-in, Google, permission step */
+  const ob = await page(browser, "?onboard=1&reset=1");
+  check(await ob.isVisible(".w-title"), "first launch shows the welcome screen");
+  check(!(await ob.$(".navpill")), "no navigation during onboarding");
+  await shot(ob, "26-welcome");
+  await ob.click('[data-a="signinOpen"]');
+  await ob.waitForTimeout(600);
+  check(await ob.isVisible("text=Continue with Google"), "sign-in pill opens into the sign-in card");
+  await shot(ob, "27-signin-open");
+  check(await ob.evaluate(() => window.anteBack()) === true, "back closes the sign-in card");
+  await ob.waitForTimeout(500);
+  await ob.click('[data-a="signinOpen"]'); await ob.waitForTimeout(500);
+  await ob.click('.signin-card [data-a="google"]');
+  await ob.waitForSelector("text=One switch to turn on", { timeout: 3000 });
+  check(true, "Google sign-in moves on to the permission step");
+  await shot(ob, "28-welcome-perm");
+  await ob.click('[data-a="finishWelcome"]');
+  await ob.waitForTimeout(200);
+  check(await ob.isVisible(".navpill"), "finishing onboarding lands on Today");
+  await ob.click('[data-t="profile"]');
+  check(await ob.isVisible("text=sample.account@gmail.com"), "profile shows the signed-in account");
+  await shot(ob, "29-profile");
+  await ob.click('[data-a="signOut"]'); await ob.waitForTimeout(150);
+  check(await ob.isVisible("text=Not signed in"), "sign out works");
+  await ob.goto(INDEX + "?acc=1"); await ob.waitForSelector(".screen");
+  check(!(await ob.$(".w-title")), "onboarding does not come back after finishing");
+  check(ob.errors.length === 0, "no console errors in onboarding: " + ob.errors.join(" | "));
+  const of = await page(browser, "?onboard=1&reset=1&google=fail");
+  await of.click('[data-a="signinOpen"]'); await of.waitForTimeout(500);
+  await of.click('.signin-card [data-a="google"]');
+  await of.waitForSelector("text=No Google account on this phone", { timeout: 3000 });
+  check(true, "a failed Google sign-in explains what to do");
 
   /* Small phone + reduced motion */
   const s = await page(browser, "?acc=1", { width: 340, reduced: true });

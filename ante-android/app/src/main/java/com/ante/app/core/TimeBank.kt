@@ -17,7 +17,14 @@ class TimeBank(initial: BankState = BankState()) {
     /** Resets every budget when the calendar day changes. Returns true when a reset happened. */
     fun rollover(today: String): Boolean {
         if (state.day == today) return false
+        val archived = if (state.day.isEmpty()) state.history else {
+            val won = state.ledger.filter { it.deltaSec > 0 }.sumOf { it.deltaSec }
+            val lost = state.ledger.filter { it.deltaSec < 0 }.sumOf { -it.deltaSec }
+            (listOf(DaySummary(state.day, state.usedTodaySec, won, lost)) + state.history).take(HISTORY_MAX)
+        }
         state = state.copy(
+            history = archived,
+            usedTodaySec = 0,
             day = today,
             limits = state.limits.map { it.copy(leftSec = it.limitSec) },
             ledger = emptyList(),
@@ -120,7 +127,7 @@ class TimeBank(initial: BankState = BankState()) {
         val s = state.session ?: return 0
         val usedSec = ((nowMs - s.startedAtMs).coerceAtLeast(0) / 1000L).toInt()
         val refund = (s.grantedSec - usedSec).coerceIn(0, s.grantedSec)
-        state = state.copy(session = null)
+        state = state.copy(session = null, usedTodaySec = state.usedTodaySec + (s.grantedSec - refund))
         if (refund > 0) adjustLeft(s.pkg, refund)
         return refund
     }
@@ -129,7 +136,7 @@ class TimeBank(initial: BankState = BankState()) {
     fun expireSession(nowMs: Long): String? {
         val s = state.session ?: return null
         if (nowMs < s.endsAtMs) return null
-        state = state.copy(session = null)
+        state = state.copy(session = null, usedTodaySec = state.usedTodaySec + s.grantedSec)
         return s.pkg
     }
 
@@ -188,6 +195,7 @@ class TimeBank(initial: BankState = BankState()) {
         const val MAX_LIMIT_SEC = 24 * 60 * 60
         const val MAX_RETURN_MULTIPLE = 100
         const val LEDGER_MAX = 50
+        const val HISTORY_MAX = 186
         const val MIN_DAY_MS = 23L * 60 * 60 * 1000
         const val SETTINGS_PASS_MS = 2L * 60 * 1000
 
