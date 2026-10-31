@@ -171,7 +171,7 @@
     signInWithGoogle() {
       setTimeout(() => {
         if (q.get("google") === "fail") { window.anteAuth && window.anteAuth(JSON.stringify({ ok: false, error: "no_account", message: "No Google account on this phone. Add one in Settings, then try again." })); return; }
-        Object.assign(ACCT, { signedIn: true, name: "Sample Account", email: "sample.account@gmail.com" }); saveAcct();
+        Object.assign(ACCT, { signedIn: true, name: "Demo account", email: "demo@example.com" }); saveAcct();
         window.anteAuth && window.anteAuth(JSON.stringify({ ok: true, name: ACCT.name, email: ACCT.email }));
       }, 500);
     },

@@ -489,3 +489,7 @@ img { max-width: 100%; }
 .bets .chip[aria-pressed="true"] { color: var(--brass-ink); }
 .toast { bottom: 92px; }
 .signin-card { position: absolute; top: 0; left: 0; }
+.demo-links { display: flex; flex-direction: column; gap: var(--s2); }
+.demo-links a { text-decoration: none; }
+.demo-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 40; display: flex; justify-content: center; gap: var(--s2); padding: 6px max(16px, env(safe-area-inset-left, 0px)); background: var(--ivory); color: var(--brass-ink); font-size: var(--t-xs); font-weight: 600; }
+.demo-bar a { color: inherit; }

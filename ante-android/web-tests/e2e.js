@@ -5,7 +5,8 @@ const { chromium } = require("playwright");
 const path = require("path");
 const fs = require("fs");
 
-const INDEX = "file://" + path.resolve(__dirname, "../app/src/main/assets/web/index.html");
+// E2E_URL tests a served copy (for example the web demo build); default is the bundled app files.
+const INDEX = process.env.E2E_URL || "file://" + path.resolve(__dirname, "../app/src/main/assets/web/index.html");
 const OUT = process.argv[2] || path.resolve(__dirname, "../build/e2e");
 fs.mkdirSync(OUT, { recursive: true });
 
@@ -262,7 +263,7 @@ async function noOverflow(p, label) {
   await ob.waitForTimeout(200);
   check(await ob.isVisible(".navpill"), "finishing onboarding lands on Today");
   await ob.click('[data-t="profile"]');
-  check(await ob.isVisible("text=sample.account@gmail.com"), "profile shows the signed-in account");
+  check(await ob.isVisible("text=demo@example.com"), "profile shows the signed-in account");
   await shot(ob, "29-profile");
   await ob.click('[data-a="signOut"]'); await ob.waitForTimeout(150);
   check(await ob.isVisible("text=Not signed in"), "sign out works");

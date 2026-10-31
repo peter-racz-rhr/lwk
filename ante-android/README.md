@@ -47,6 +47,21 @@ release APK, add a second Android client with the release key's SHA-1.
 Profile. Ante has no server, so nothing is synced or backed up yet. To add cloud backup later,
 send `GoogleIdTokenCredential.idToken` to a backend (for example Firebase Auth) that verifies it.
 
+## Web demo (Netlify or Vercel)
+
+`bash scripts/build-web-demo.sh` builds `build/web-demo/`, the full UI running in the browser with
+sample data. Nothing is installed or blocked in the browser. Profile has links to the block screen,
+Strict mode and onboarding.
+
+- **Netlify (easiest):** open [app.netlify.com/drop](https://app.netlify.com/drop) and drag the
+  `web-demo` folder onto it. Sign up or log in to keep the site (anonymous drops are deleted after
+  an hour). Security headers come from `_headers`.
+- **Vercel:** run `npx vercel deploy build/web-demo` and follow the prompts. Headers come from
+  `vercel.json`.
+
+To check a built copy, run `E2E_URL=http://localhost:8787/index.html node web-tests/e2e.js`
+against any local server.
+
 ## First run on the phone
 
 1. Open Ante and tap **Open Accessibility settings**. Find **Ante app limits** and switch it on.

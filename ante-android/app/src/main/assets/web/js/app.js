@@ -306,6 +306,16 @@
           <button class="switch" role="switch" aria-checked="${!!S.strict}" data-a="${S.strict ? "strictOff" : "strictOn"}" aria-labelledby="strict-h"><i></i></button></div>
         <p class="muted">${S.strict ? "Settings and uninstalling are covered. Getting in, or turning this off, takes a 30-second wait." : "Covers Settings and the uninstall screen too, so blocking can't be switched off on impulse."}</p>
       </section>`}
+      ${A.native ? "" : `
+      <section class="panel" aria-labelledby="demo-h">
+        <div><h2 class="h3" id="demo-h">Web demo</h2><p class="muted">This is the browser version, with sample data. On a phone, Ante covers the real app.</p></div>
+        <div class="demo-links">
+          <a class="btn quiet" href="?mode=block&pkg=com.instagram.android&acc=1">See the block screen</a>
+          <a class="btn quiet" href="?mode=block&pkg=com.android.settings&note=strict&acc=1">See Strict mode covering Settings</a>
+          <a class="btn quiet" href="?onboard=1&reset=1">Start onboarding again</a>
+          <a class="btn ghost" href="?reset=1&acc=1">Reset demo data</a>
+        </div>
+      </section>`}
       <p class="fine center">Ante 0.1 · No real money · Your limits and history stay on this phone.</p>
     </div>`;
   }
