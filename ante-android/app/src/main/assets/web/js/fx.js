@@ -18,14 +18,27 @@
   };
   const suitSvg = (suit, cls) => `<svg class="${cls || ""}" viewBox="0 0 64 64" aria-hidden="true"><path d="${SUIT_PATH[suit]}" fill="currentColor"/></svg>`;
 
+  /* Standard pip positions (x%, y%, upside-down) for 2–10, as on a printed deck. */
+  const L = 28, C = 50, R = 72;
+  const PIPS = {
+    2: [[C, 18], [C, 82, 1]], 3: [[C, 18], [C, 50], [C, 82, 1]],
+    4: [[L, 18], [R, 18], [L, 82, 1], [R, 82, 1]],
+    5: [[L, 18], [R, 18], [C, 50], [L, 82, 1], [R, 82, 1]],
+    6: [[L, 18], [R, 18], [L, 50], [R, 50], [L, 82, 1], [R, 82, 1]],
+    7: [[L, 18], [R, 18], [C, 34], [L, 50], [R, 50], [L, 82, 1], [R, 82, 1]],
+    8: [[L, 18], [R, 18], [C, 34], [L, 50], [R, 50], [C, 66, 1], [L, 82, 1], [R, 82, 1]],
+    9: [[L, 18], [R, 18], [L, 39], [R, 39], [C, 50], [L, 61, 1], [R, 61, 1], [L, 82, 1], [R, 82, 1]],
+    10: [[L, 18], [R, 18], [C, 29], [L, 39], [R, 39], [L, 61, 1], [R, 61, 1], [C, 71, 1], [L, 82, 1], [R, 82, 1]],
+  };
   function cardHtml(card, faceUp) {
     const back = `<div class="face back"><i></i></div>`;
     if (!card) return `<div class="card"><div class="card-in">${back}</div></div>`;
     const suit = G.SUITS[card.s], rank = G.rankLabel(card.r), red = G.isRed(card);
     const court = card.r >= 11;
     const centre = court
-      ? `<span class="court"><b>${rank}</b>${suitSvg(suit, "court-suit")}</span>`
-      : `<span class="pip">${suitSvg(suit)}</span>`;
+      ? `<span class="court"><span class="court-band"></span><b>${rank}</b>${suitSvg(suit, "court-suit")}<span class="court-band b"></span></span>`
+      : card.r === 1 ? `<span class="pip ace">${suitSvg(suit)}</span>`
+        : `<span class="pips">${PIPS[card.r].map(([x, y, f]) => `<span class="p${f ? " f" : ""}" style="left:${x}%;top:${y}%">${suitSvg(suit)}</span>`).join("")}</span>`;
     const name = `${rank === "A" ? "Ace" : rank === "J" ? "Jack" : rank === "Q" ? "Queen" : rank === "K" ? "King" : rank} of ${suit}`;
     return `<div class="card ${faceUp ? "up" : ""}" data-name="${name}" role="img" aria-label="${faceUp ? name : "Face-down card"}">
       <div class="card-in">
@@ -36,8 +49,8 @@
   }
 
   const SLOT_ART = {
-    seven: `<svg viewBox="0 0 64 64" aria-label="Seven"><text x="32" y="53" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-weight="700" font-size="54" fill="var(--red)" stroke="#ffffff" stroke-width="2" paint-order="stroke">7</text></svg>`,
-    bar: `<svg viewBox="0 0 64 64" aria-label="Bar"><rect x="5" y="20" width="54" height="24" rx="6" fill="#111111" stroke="var(--brass)" stroke-width="2.5"/><text x="32" y="39" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-weight="800" font-size="19" letter-spacing="2" fill="var(--ivory)">BAR</text></svg>`,
+    seven: `<svg viewBox="0 0 64 64" aria-label="Seven"><text x="32" y="53" text-anchor="middle" font-family="Geist, Arial, sans-serif" font-weight="700" font-size="54" fill="var(--red)" stroke="#ffffff" stroke-width="2" paint-order="stroke">7</text></svg>`,
+    bar: `<svg viewBox="0 0 64 64" aria-label="Bar"><rect x="5" y="20" width="54" height="24" rx="6" fill="#111111" stroke="var(--brass)" stroke-width="2.5"/><text x="32" y="39" text-anchor="middle" font-family="Geist, Arial, sans-serif" font-weight="800" font-size="19" letter-spacing="2" fill="var(--ivory)">BAR</text></svg>`,
     bell: `<svg viewBox="0 0 64 64" aria-label="Bell"><path d="M32 8c-2 0-3 1-3 3v2c-9 2-14 10-14 19v9l-5 6v3h44v-3l-5-6v-9c0-9-5-17-14-19v-2c0-2-1-3-3-3z" fill="var(--brass)"/><path d="M24 22c-3 3-4 7-4 11v7" stroke="#fafafa" stroke-width="3" fill="none" stroke-linecap="round"/><circle cx="32" cy="54" r="5" fill="var(--brass-deep)"/></svg>`,
     diamond: `<svg viewBox="0 0 64 64" aria-label="Diamond"><path d="M14 22 24 10h16l10 12-18 32z" fill="#BFE6E0"/><path d="M14 22h36L32 54z" fill="#8CCFC6"/><path d="M24 10l-4 12h24l-4-12" fill="#E6FAF6"/><path d="M14 22 24 10h16l10 12-18 32z" fill="none" stroke="#2C6F66" stroke-width="1.5"/></svg>`,
     cherry: `<svg viewBox="0 0 64 64" aria-label="Cherries"><path d="M34 8c-6 8-12 18-14 30M34 8c4 10 8 18 12 32" stroke="#3F7D3A" stroke-width="3.5" fill="none" stroke-linecap="round"/><path d="M34 8c6-2 12 0 16 5-6 2-12 1-16-5z" fill="#5FA052"/><circle cx="19" cy="44" r="11" fill="var(--red)"/><circle cx="46" cy="44" r="11" fill="var(--red)"/><circle cx="15" cy="40" r="3" fill="#F2B3A8"/><circle cx="42" cy="40" r="3" fill="#F2B3A8"/></svg>`,
@@ -57,16 +70,26 @@
       }
       return `<svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="49" fill="#1a1a1a" stroke="var(--line-2)" stroke-width="1.5"/>${wedges}<circle cx="50" cy="50" r="30" fill="var(--felt-deep)"/><circle cx="50" cy="50" r="7" fill="var(--brass)"/><path d="M50 32v36M32 50h36" stroke="var(--brass)" stroke-width="2.5" stroke-linecap="round"/><circle cx="72" cy="22" r="3.4" fill="var(--ivory)"/></svg>`;
     },
-    blackjack: () => `<div class="mini-cards">${cardHtml({ r: 1, s: 0 }, true)}${cardHtml({ r: 13, s: 1 }, true)}</div>`,
-    slots: () => `<div class="mini-reels">${["seven", "seven", "seven"].map(s => `<span>${slotSvg(s)}</span>`).join("")}</div>`,
-    poker: () => `<div class="mini-fan">${[{ r: 10, s: 2 }, { r: 11, s: 2 }, { r: 12, s: 2 }, { r: 13, s: 2 }, { r: 1, s: 2 }].map(c => cardHtml(c, true)).join("")}</div>`,
-    coin: () => `<div class="mini-coin">${coinFace("H")}</div>`,
+    blackjack: () => `<div class="mini-cards">${cardHtml({ r: 1, s: 0 }, true)}${cardHtml({ r: 13, s: 1 }, true)}<span class="mini-chip"></span></div>`,
+    slots: () => `<div class="mini-cab"><span class="mini-light"></span><div class="mini-reels">${["seven", "seven", "seven"].map(s => `<span>${slotSvg(s)}</span>`).join("")}</div><span class="mini-lever"><i></i></span></div>`,
+    poker: () => `<div class="mini-fan">${[{ r: 10, s: 1 }, { r: 11, s: 1 }, { r: 12, s: 1 }, { r: 13, s: 1 }, { r: 1, s: 1 }].map(c => cardHtml(c, true)).join("")}</div>`,
+    coin: () => `<div class="mini-coin">${coinFace("H", "mini")}</div>`,
   };
 
-  function coinFace(side) {
-    return side === "H"
-      ? `<svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="48" fill="var(--brass)"/><circle cx="50" cy="50" r="41" fill="none" stroke="var(--brass-deep)" stroke-width="2" stroke-dasharray="3 4"/><circle cx="50" cy="50" r="34" fill="#e5e5e5"/><text x="50" y="64" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-weight="800" font-size="40" fill="var(--brass-ink)">H</text></svg>`
-      : `<svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="48" fill="#a3a3a3"/><circle cx="50" cy="50" r="41" fill="none" stroke="var(--brass-deep)" stroke-width="2" stroke-dasharray="3 4"/><circle cx="50" cy="50" r="34" fill="#d4d4d4"/><path d="M38 30h24v4l-9 16 9 16v4H38v-4l9-16-9-16z" fill="var(--brass-ink)"/><text x="50" y="92" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-weight="800" font-size="9" letter-spacing="2" fill="var(--brass-ink)">T</text></svg>`;
+  /** A minted coin: metallic rim with reeding, embossed face. Heads shows Ante's hourglass mark. */
+  function coinFace(side, key) {
+    const id = "cf" + side + (key || "");
+    const rim = Array.from({ length: 60 }, (_, i) => { const a = (i / 60) * Math.PI * 2; return `<line x1="${(50 + 45 * Math.cos(a)).toFixed(2)}" y1="${(50 + 45 * Math.sin(a)).toFixed(2)}" x2="${(50 + 48.5 * Math.cos(a)).toFixed(2)}" y2="${(50 + 48.5 * Math.sin(a)).toFixed(2)}"/>`; }).join("");
+    const mark = side === "H"
+      ? `<path d="M40 31h20v4l-7.5 15 7.5 15v4H40v-4l7.5-15L40 35z" fill="url(#${id}e)" stroke="#6b6b6b" stroke-width=".8"/><text x="50" y="82" text-anchor="middle" font-family="Geist, Arial, sans-serif" font-weight="700" font-size="7.5" letter-spacing="3" fill="#5a5a5a">ANTE</text>`
+      : `<text x="50" y="62" text-anchor="middle" font-family="Geist, Arial, sans-serif" font-weight="700" font-size="30" fill="url(#${id}e)" stroke="#6b6b6b" stroke-width=".8">1′</text><text x="50" y="82" text-anchor="middle" font-family="Geist, Arial, sans-serif" font-weight="700" font-size="7.5" letter-spacing="3" fill="#5a5a5a">MINUTE</text>`;
+    return `<svg viewBox="0 0 100 100" aria-hidden="true"><defs>
+      <radialGradient id="${id}r" cx="35%" cy="30%" r="80%"><stop offset="0" stop-color="#ffffff"/><stop offset=".45" stop-color="#d4d4d4"/><stop offset="1" stop-color="#8a8a8a"/></radialGradient>
+      <radialGradient id="${id}f" cx="40%" cy="35%" r="75%"><stop offset="0" stop-color="#f5f5f5"/><stop offset=".6" stop-color="#c8c8c8"/><stop offset="1" stop-color="#a1a1a1"/></radialGradient>
+      <linearGradient id="${id}e" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#9a9a9a"/></linearGradient></defs>
+      <circle cx="50" cy="50" r="49" fill="url(#${id}r)"/><g stroke="#8f8f8f" stroke-width="1.2">${rim}</g>
+      <circle cx="50" cy="50" r="41" fill="url(#${id}f)" stroke="#9a9a9a" stroke-width="1"/>
+      <circle cx="50" cy="50" r="36" fill="none" stroke="#b5b5b5" stroke-width=".8" stroke-dasharray="1.5 2.5"/>${mark}</svg>`;
   }
 
   /* ---------- particles ---------- */
@@ -148,6 +171,7 @@
   }
   async function deal(row, card, faceUp, from, haptic) {
     const el = addCard(row, null);
+    el.style.setProperty("--rot", ((Math.random() - 0.5) * 4).toFixed(2) + "deg");
     if (haptic) haptic("tap");
     sfx("deal");
     await flyIn(el, from);
@@ -158,7 +182,7 @@
   /* ---------- coin ---------- */
   function Coin(host) {
     host.innerHTML = `<div class="coin-stage"><div class="coin-shadow"></div><div class="coin-toss"><div class="coin3d">
-      <div class="coin-face heads">${coinFace("H")}</div><div class="coin-face tails">${coinFace("T")}</div></div></div></div>`;
+      <div class="coin-face heads">${coinFace("H", "big")}</div><div class="coin-face tails">${coinFace("T", "big")}</div></div></div></div>`;
     const toss = host.querySelector(".coin-toss"), coin = host.querySelector(".coin3d"), shadow = host.querySelector(".coin-shadow");
     let angle = 0;
     return {
@@ -176,12 +200,14 @@
         coin.style.transform = `rotateX(${end}deg)`;
         a2.cancel();
         angle = end;
+        if (!reduced()) await finished(toss.animate([{ transform: "scale(1)" }, { transform: "scale(1.08, .92)", offset: 0.35 }, { transform: "scale(1)" }], { duration: 260, easing: "ease-out" }));
       },
     };
   }
 
   /* ---------- roulette wheel ---------- */
-  function Roulette(host) {
+  function Roulette(host, opts) {
+    const MAX = (opts && opts.max) || 440;
     host.innerHTML = `<div class="wheel-wrap"><canvas class="wheel" aria-label="Roulette wheel" role="img"></canvas>
       <div class="wheel-result" aria-live="polite"></div></div>`;
     const cv = host.querySelector("canvas"), out = host.querySelector(".wheel-result");
@@ -190,7 +216,7 @@
     let wheelA = 0, ballA = -Math.PI / 2, ballR = 0, highlight = -1, showBall = false;
 
     function setup() {
-      const w = Math.min(host.clientWidth || 300, 320);
+      const w = Math.min(host.clientWidth || 300, MAX, Math.round(window.innerHeight * 0.5));
       dpr = Math.min(2, window.devicePixelRatio || 1);
       size = w; R = w / 2;
       cv.style.width = cv.style.height = w + "px";
@@ -230,7 +256,7 @@
         // number
         x.save(); x.rotate(i * STEP);
         x.fillStyle = "#F2EAD8";
-        x.font = `700 ${Math.round(R * 0.085)}px Inter, Arial, sans-serif`;
+        x.font = `700 ${Math.round(R * 0.085)}px Geist, Arial, sans-serif`;
         x.textAlign = "center"; x.textBaseline = "middle";
         x.fillText(String(n), 0, -R * 0.735);
         x.restore();
@@ -340,6 +366,7 @@
           requestAnimationFrame(frame);
         });
       },
+      resize() { lastW = host.clientWidth; setup(); },
       destroy() { if (ro) ro.disconnect(); },
     };
   }
@@ -476,5 +503,8 @@
     coin: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5.5"/></svg>',
   })[id] || "";
 
-  window.AnteFX = { GAME_ICON, cardHtml, slotSvg, coinFace, GAME_ART, suitSvg, burst, countUp, wait, Coin, Roulette, Slots, Blackjack, Poker, reduced };
+  /** A static, real wheel for the Roulette tile. */
+  function miniWheel(el) { el.innerHTML = ""; Roulette(el, { max: 136 }); }
+
+  window.AnteFX = { GAME_ICON, miniWheel, cardHtml, slotSvg, coinFace, GAME_ART, suitSvg, burst, countUp, wait, Coin, Roulette, Slots, Blackjack, Poker, reduced };
 })();

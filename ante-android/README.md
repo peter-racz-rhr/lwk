@@ -112,7 +112,7 @@ The app uses only the Android framework, plus AndroidX Credential Manager and Go
 
 | Command | What it checks |
 |---|---|
-| `./gradlew test` | 63 JUnit tests: time accounting, daily history, JSON codec, tamper-proof clock, and a 120,000-step fuzz of the blocking rules |
+| `./gradlew test` | 64 JUnit tests: time accounting, daily history, JSON codec, tamper-proof clock, and a 120,000-step fuzz of the blocking rules |
 | `node --test web-tests/games.test.js` | 14 tests of game rules and returns (exact slots return, roulette 36/37, simulated blackjack) |
 | `node web-tests/e2e.js` | Full UI run in Chromium with Playwright and the browser mock |
 
@@ -130,6 +130,24 @@ In short: no remove-and-re-add refill, no clock or time-zone tricks, sleep and s
 **Strict mode** (on Today) covers Settings and uninstalling behind a 30-second wait. Still open: websites in a
 browser, picture-in-picture video and background audio.
 
+## App structure (web UI)
+
+| File | What it does |
+|---|---|
+| `js/core.js` | Shared state, formatting, icons |
+| `js/home.js` | Home: dot-matrix clock, screen time by app, limits, net minutes, and their detail pages |
+| `js/tables.js` | Play: stake control, the five tables, focus mode (the table fills the screen while a round runs), block screen |
+| `js/profile.js` | Profile: account, themes, settings, blocking health, Strict mode, Ko-fi, legal |
+| `js/onboarding.js` | Three animated story slides, sign-in, permission |
+| `js/app.js` | Sheets, the three-tab navigation, rendering, native hooks |
+| `js/charts.js`, `js/themes.js`, `js/legal.js`, `js/fx.js`, `js/sfx.js`, `js/games.js`, `js/bridge.js` | Charts, themes, legal texts, table animations, sounds, game rules, native bridge |
+
+## Legal
+
+Terms of Service, Privacy Policy and Imprint are in the app (Profile → Legal) and in `docs/legal/`.
+Regenerate the Markdown copies with `node scripts/export-legal.js` after editing `js/legal.js`.
+**Add the postcode and town** to `ADDRESS` in `js/legal.js`, and have the texts reviewed by a lawyer before publishing.
+
 ## Sounds
 
 Every table has sound: chips, the card shoe, the ball on the wheel, the reel motor, a coin ring, and win and
@@ -144,7 +162,8 @@ table's header mutes them, and the choice is remembered.
 - **Detection gap:** a few apps open without a normal activity window change, which can delay detection.
 - **No sounds yet.** Haptics are on.
 
-Fonts: Inter, under the SIL Open Font License (`assets/web/fonts/OFL.txt`).
+Fonts: Geist (interface) and Doto (the dot-matrix clocks), both under the SIL Open Font License (`assets/web/fonts/OFL.txt`).
+Themes: Neutral plus the four [Catppuccin](https://catppuccin.com) flavours (Latte, Frappé, Macchiato, Mocha), MIT licensed.
 Design credits: the floating pill navigation and the morphing sign-in are original code, inspired by
 [Skiper UI](https://skiper-ui.com) components 43 (Vercel tooltip) and 21. The card layouts follow
 the look of [shadcn/ui](https://ui.shadcn.com).

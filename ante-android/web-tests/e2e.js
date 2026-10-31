@@ -99,13 +99,17 @@ async function noOverflow(p, label) {
   await p.click('[data-a="rBet"][data-v="black"]');
   before = await leftOf(p, ig);
   await p.click('[data-a="rSpin"]');
-  await p.waitForTimeout(2500);
+  await p.waitForTimeout(800);
+  check(await p.evaluate(() => document.getElementById("screen").classList.contains("focus")), "the table goes full screen while it spins");
+  await p.waitForTimeout(1700);
   await shot(p, "09-roulette-spinning");
   await p.waitForSelector('[data-a="rSpin"]:not([disabled])', { timeout: 9000 });
   after = await leftOf(p, ig);
   check(after === before - 300 || after === before + 300, `roulette even-money settles (${before} → ${after})`);
   check(await p.isVisible(".wheel-result.show"), "winning number shows in the wheel");
   await shot(p, "10-roulette-done");
+  await p.waitForFunction(() => !document.getElementById("screen").classList.contains("focus"), null, { timeout: 4000 });
+  check(true, "the table snaps back after the round");
   await noOverflow(p, "roulette");
   await p.click('[data-a="leave"]');
 
@@ -153,22 +157,32 @@ async function noOverflow(p, label) {
 
   /* Ledger */
   await p.click('[data-a="leave"]');
-  await p.click('[data-t="today"]');
+  await p.click('[data-t="home"]');
   await p.waitForTimeout(200);
-  await p.click('[data-t="history"]');
+  await p.click('[data-t="home"]');
   await p.waitForTimeout(200);
-  check((await p.$$(".txn")).length >= 5, "bets appear in History's recent bets");
-  await shot(p, "17b-history");
+  check(await p.isVisible(".dotclock"), "home shows the dot-matrix clock");
+  check((await p.$$(".card-chart .sbar-col")).length === 7, "home shows a 7-day stacked screen-time chart");
+  check((await p.$$(".card-chart .sbar-col.now .sbar i")).length === 3, "today's bar is split into one segment per app");
+  check(await p.isVisible(".card-balance .trend"), "net card shows today's graph");
+  await shot(p, "17-home-after-bets");
+  await p.click('.card-balance');
+  await p.waitForTimeout(250);
+  check((await p.$$(".txn")).length >= 5, "bets appear in table results");
+  await shot(p, "17b-results");
+  await p.click('[data-t="home"]');
+  await p.click('.card-chart');
+  await p.waitForTimeout(250);
+  check((await p.$$(".slegend li")).length === 3, "screen-time page has a legend per app");
   await p.click('[data-a="range"][data-r="months"]');
-  check((await p.$$(".bars .bar-col")).length === 6, "history switches to 6 months");
-  await p.click('[data-t="today"]');
-  check((await p.$$(".card-chart .bar-col")).length === 7, "today shows a 7-day screen-time chart");
-  check(await p.isVisible("text=Net minutes today"), "today shows the wins and losses card");
-  await shot(p, "17-today-after-bets");
+  check((await p.$$(".sbars .sbar-col")).length === 6, "screen time switches to 6 months");
+  await shot(p, "17c-screentime");
+  check(await p.evaluate(() => window.anteBack()) === true, "back from screen time returns home");
+  check(await p.isVisible("text=Net minutes today"), "home shows the wins and losses card");
   check(p.errors.length === 0, "no console errors in main flow: " + p.errors.join(" | "));
 
   /* Back hook */
-  check(await p.evaluate(() => window.anteBack()) === false, "back on Today lets the activity close");
+  check(await p.evaluate(() => window.anteBack()) === false, "back on Home lets the activity close");
 
   /* Block screen */
   const b = await page(browser, "?mode=block&pkg=" + ig + "&acc=1&breath=2");
@@ -213,14 +227,14 @@ async function noOverflow(p, label) {
 
   /* Health tips + strict mode */
   const st = await page(browser, "?acc=1&wait=1&battery=0&reset=1");
-  check(await st.isVisible("text=Blocking is on"), "status shows blocking is on");
+  check(await st.isVisible("text=Blocking on"), "status shows blocking is on");
   check(await st.isVisible(".navpill .ndot"), "profile tab gets a dot when something needs care");
   await st.click('[data-t="profile"]');
   check(await st.isVisible("text=Restricted"), "profile flags restricted background use");
   await st.click('[data-a="strictOn"]');
   await st.click('[data-a="agreeStrict"]');
   await st.waitForTimeout(150);
-  check(await st.isVisible(".switch[aria-checked=\"true\"]"), "strict mode turns on");
+  check(await st.isVisible('[data-a="strictOff"][aria-checked="true"]'), "strict mode turns on");
   await shot(st, "23-strict-on");
   await st.click('[data-a="strictOff"]');
   check(await st.isDisabled("#wait-go"), "turning strict off starts disabled behind a wait");
@@ -229,7 +243,23 @@ async function noOverflow(p, label) {
   await st.waitForSelector("#wait-go:not([disabled])", { timeout: 3000 });
   await st.click("#wait-go");
   await st.waitForTimeout(150);
-  check(await st.isVisible(".switch[aria-checked=\"false\"]"), "strict mode turns off after the wait");
+  check(await st.isVisible('[data-a="strictOn"][aria-checked="false"]'), "strict mode turns off after the wait");
+  /* Themes, legal, support */
+  await st.click('[data-a="theme"][data-v="mocha"]');
+  check(await st.evaluate(() => document.documentElement.dataset.theme) === "mocha", "Catppuccin Mocha theme applies");
+  await st.click('[data-a="accent"][data-v="peach"]');
+  check(await st.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--accent").trim()) === "#fab387", "accent colour applies");
+  await shot(st, "24b-profile-mocha");
+  await st.click('[data-a="theme"][data-v="latte"]');
+  await shot(st, "24c-profile-latte");
+  await st.fill("#name-input", "Péter");
+  check((await st.textContent(".profile-card .avatar")).trim() === "P", "display name updates the avatar");
+  check(await st.isVisible("text=Tip on Ko-fi"), "Ko-fi support card is there");
+  await st.click('[data-a="doc"][data-v="imprint"]');
+  check(await st.isVisible("text=Péter Rácz"), "imprint shows the provider");
+  await shot(st, "24d-imprint");
+  await st.click('[data-a="legalBack"]');
+  await st.click('[data-a="theme"][data-v="neutral"]');
   check(st.errors.length === 0, "no console errors in strict flow: " + st.errors.join(" | "));
 
   const gs = await page(browser, "?mode=block&pkg=com.android.settings&note=strict&acc=1&wait=1");
@@ -245,7 +275,14 @@ async function noOverflow(p, label) {
 
   /* Onboarding: morphing sign-in, Google, permission step */
   const ob = await page(browser, "?onboard=1&reset=1");
-  check(await ob.isVisible(".w-title"), "first launch shows the welcome screen");
+  check(await ob.isVisible(".ob-slide.active .ob-title"), "first launch shows the story");
+  await shot(ob, "26a-story1");
+  await ob.click('[data-a="obNext"]'); await ob.waitForTimeout(650);
+  await shot(ob, "26b-story2");
+  await ob.click('[data-a="obNext"]'); await ob.waitForTimeout(650);
+  await shot(ob, "26c-story3");
+  await ob.click('[data-a="obNext"]'); await ob.waitForTimeout(200);
+  check(await ob.isVisible(".w-title"), "story leads to sign-in");
   check(!(await ob.$(".navpill")), "no navigation during onboarding");
   await shot(ob, "26-welcome");
   await ob.click('[data-a="signinOpen"]');
@@ -268,9 +305,10 @@ async function noOverflow(p, label) {
   await ob.click('[data-a="signOut"]'); await ob.waitForTimeout(150);
   check(await ob.isVisible("text=Not signed in"), "sign out works");
   await ob.goto(INDEX + "?acc=1"); await ob.waitForSelector(".screen");
-  check(!(await ob.$(".w-title")), "onboarding does not come back after finishing");
+  check(!(await ob.$(".w-title")) && !(await ob.$(".ob-title")), "onboarding does not come back after finishing");
   check(ob.errors.length === 0, "no console errors in onboarding: " + ob.errors.join(" | "));
   const of = await page(browser, "?onboard=1&reset=1&google=fail");
+  await of.click('[data-a="obSkip"]'); await of.waitForTimeout(200);
   await of.click('[data-a="signinOpen"]'); await of.waitForTimeout(500);
   await of.click('.signin-card [data-a="google"]');
   await of.waitForSelector("text=No Google account on this phone", { timeout: 3000 });

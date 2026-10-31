@@ -41,6 +41,7 @@ data class BankState(
     val settingsPassUntilMs: Long = 0,
     /** Screen time actually spent in limited apps today (sessions only, not bets). */
     val usedTodaySec: Int = 0,
+    val usedTodayByApp: Map<String, Int> = emptyMap(),
     /** Minutes won and lost at the tables today, counted per bet (the ledger only keeps the latest 50). */
     val wonTodaySec: Int = 0,
     val lostTodaySec: Int = 0,
@@ -54,6 +55,8 @@ data class DaySummary(
     val usedSec: Int,
     val wonSec: Int,
     val lostSec: Int,
+    /** Seconds used per app that day. */
+    val byApp: Map<String, Int> = emptyMap(),
 )
 
 enum class Decision { ALLOW, BLOCK }

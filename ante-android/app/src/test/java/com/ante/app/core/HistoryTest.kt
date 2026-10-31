@@ -34,7 +34,7 @@ class HistoryTest {
         b.placeBet(ig, 60); b.settleBet(ig, "Roulette", 60, 0, 2) // -60
         b.rollover("2026-10-31")
         val d = b.state.history.first()
-        assertEquals(DaySummary("2026-10-30", usedSec = 120, wonSec = 300, lostSec = 60), d)
+        assertEquals(DaySummary("2026-10-30", usedSec = 120, wonSec = 300, lostSec = 60, byApp = mapOf(ig to 120)), d)
         assertEquals(0, b.state.usedTodaySec)
     }
 
@@ -75,10 +75,23 @@ class HistoryTest {
         assertEquals(90, b.state.usedTodaySec)
     }
 
+    @Test fun usageIsSplitPerApp() {
+        val b = bank()
+        b.setLimit("tt", "TikTok", 3600)
+        b.startSession(ig, 300, 0); b.endSession(120_000)
+        b.startSession("tt", 300, 120_000); b.expireSession(420_000)
+        assertEquals(mapOf(ig to 120, "tt" to 300), b.state.usedTodayByApp)
+        assertEquals(420, b.state.usedTodaySec)
+        b.rollover("2026-10-31")
+        assertEquals(mapOf(ig to 120, "tt" to 300), b.state.history.first().byApp)
+        assertTrue(b.state.usedTodayByApp.isEmpty())
+    }
+
     @Test fun historySurvivesSaveAndLoad() {
         val b = bank()
         b.startSession(ig, 60, 0); b.expireSession(60_000)
         b.rollover("2026-10-31")
+        assertEquals(mapOf(ig to 60), Codec.decode(Codec.encode(b.state)).history.first().byApp)
         val again = Codec.decode(Codec.encode(b.state))
         assertEquals(b.state.history, again.history)
         assertEquals(b.state.usedTodaySec, again.usedTodaySec)

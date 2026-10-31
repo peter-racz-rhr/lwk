@@ -21,14 +21,15 @@ class TimeBank(initial: BankState = BankState()) {
         val running = state.session
         if (running != null && nowMs != null) {
             val used = ((nowMs - running.startedAtMs).coerceAtLeast(0) / 1000L).toInt().coerceAtMost(running.grantedSec)
-            state = state.copy(usedTodaySec = state.usedTodaySec + used)
+            addUsed(running.pkg, used)
         }
         val archived = if (state.day.isEmpty()) state.history else {
-            (listOf(DaySummary(state.day, state.usedTodaySec, state.wonTodaySec, state.lostTodaySec)) + state.history).take(HISTORY_MAX)
+            (listOf(DaySummary(state.day, state.usedTodaySec, state.wonTodaySec, state.lostTodaySec, state.usedTodayByApp)) + state.history).take(HISTORY_MAX)
         }
         state = state.copy(
             history = archived,
             usedTodaySec = 0,
+            usedTodayByApp = emptyMap(),
             wonTodaySec = 0,
             lostTodaySec = 0,
             day = today,
@@ -105,7 +106,7 @@ class TimeBank(initial: BankState = BankState()) {
         val session = state.session
         if (session != null && session.pkg == pkg && nowMs != null) {
             val used = ((nowMs - session.startedAtMs).coerceAtLeast(0) / 1000L).toInt().coerceAtMost(session.grantedSec)
-            state = state.copy(usedTodaySec = state.usedTodaySec + used)
+            addUsed(pkg, used)
         }
         // Unused session time counts as left when parking the limit.
         val reserved = if (session != null && session.pkg == pkg) session.grantedSec else 0
@@ -137,7 +138,8 @@ class TimeBank(initial: BankState = BankState()) {
         val s = state.session ?: return 0
         val usedSec = ((nowMs - s.startedAtMs).coerceAtLeast(0) / 1000L).toInt()
         val refund = (s.grantedSec - usedSec).coerceIn(0, s.grantedSec)
-        state = state.copy(session = null, usedTodaySec = state.usedTodaySec + (s.grantedSec - refund))
+        state = state.copy(session = null)
+        addUsed(s.pkg, s.grantedSec - refund)
         if (refund > 0) adjustLeft(s.pkg, refund)
         return refund
     }
@@ -146,7 +148,8 @@ class TimeBank(initial: BankState = BankState()) {
     fun expireSession(nowMs: Long): String? {
         val s = state.session ?: return null
         if (nowMs < s.endsAtMs) return null
-        state = state.copy(session = null, usedTodaySec = state.usedTodaySec + s.grantedSec)
+        state = state.copy(session = null)
+        addUsed(s.pkg, s.grantedSec)
         return s.pkg
     }
 
@@ -196,6 +199,15 @@ class TimeBank(initial: BankState = BankState()) {
             lostTodaySec = state.lostTodaySec + (-net).coerceAtLeast(0),
         )
         return net
+    }
+
+    /** Adds screen time used in [pkg] today, to the total and to the per-app split. */
+    private fun addUsed(pkg: String, sec: Int) {
+        if (sec <= 0) return
+        state = state.copy(
+            usedTodaySec = state.usedTodaySec + sec,
+            usedTodayByApp = state.usedTodayByApp + (pkg to ((state.usedTodayByApp[pkg] ?: 0) + sec)),
+        )
     }
 
     private fun adjustLeft(pkg: String, delta: Int) {

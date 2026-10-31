@@ -8,37 +8,24 @@ OUT=${1:-build/web-demo}
 rm -rf "$OUT" && mkdir -p "$OUT"
 cp -r "$SRC/js" "$SRC/fonts" "$SRC/app.css" "$SRC/fonts.css" "$OUT/"
 
-# Web version of index.html: same app, web CSP (no file:), title, description and icon.
-cat > "$OUT/index.html" <<'HTML'
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="color-scheme" content="dark">
-<meta name="theme-color" content="#0a0a0a">
-<title>Ante: screen time you can bet with</title>
+# Web version of index.html, generated from the app's own page so the script list never drifts:
+# web CSP (no file:), real title, description, social tags and an icon.
+node - "$SRC/index.html" "$OUT/index.html" <<'NODE'
+const fs = require("fs");
+const [src, out] = process.argv.slice(2);
+let html = fs.readFileSync(src, "utf8");
+html = html.replace(/<meta http-equiv="Content-Security-Policy"[^>]*>\n?/, "");
+html = html.replace(/<title>[^<]*<\/title>/, `<title>Ante: screen time you can bet with</title>
 <meta name="description" content="Ante gives every app a daily time budget, covers it when the time runs out, and lets you stake minutes at roulette, blackjack, slots, poker and coin flip. Web demo with sample data.">
 <meta property="og:title" content="Ante">
 <meta property="og:description" content="Daily app limits, and casino tables played with your screen-time minutes. Web demo.">
 <meta property="og:type" content="website">
 <meta name="robots" content="noindex">
-<link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="fonts.css">
-<link rel="stylesheet" href="app.css">
-</head>
-<body>
-<main id="app" aria-live="off"></main>
-<div id="overlay"></div>
-<noscript><p style="padding:24px;color:#fafafa">Ante needs JavaScript to run.</p></noscript>
-<script src="js/games.js"></script>
-<script src="js/bridge.js"></script>
-<script src="js/sfx.js"></script>
-<script src="js/fx.js"></script>
-<script src="js/app.js"></script>
-</body>
-</html>
-HTML
+<link rel="icon" href="favicon.svg" type="image/svg+xml">`);
+html = html.replace("user-scalable=no", "");
+html = html.replace("</body>", '<noscript><p style="padding:24px">Ante needs JavaScript to run.</p></noscript>\n</body>');
+fs.writeFileSync(out, html);
+NODE
 
 cat > "$OUT/favicon.svg" <<'SVG'
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#0a0a0a"/><circle cx="32" cy="32" r="21" fill="none" stroke="#fafafa" stroke-width="4"/><path d="M23 20h18v3l-6.5 9 6.5 9v3H23v-3l6.5-9-6.5-9z" fill="#fafafa"/></svg>

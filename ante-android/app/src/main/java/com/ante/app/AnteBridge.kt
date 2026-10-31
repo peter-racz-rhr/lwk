@@ -53,6 +53,20 @@ class AnteBridge(
     }
 
     /** Installed apps without icons (fast); the page fetches icons one by one with [icon]. */
+    /** Opens one of a fixed set of outside links (Ko-fi, the contact email) in the right app. */
+    @JavascriptInterface
+    fun openLink(url: String): Boolean {
+        if (url !in OUTSIDE_LINKS) return false
+        activity.runOnUiThread {
+            try {
+                activity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            } catch (e: Exception) {
+                // No browser or mail app; the page also shows the address as text.
+            }
+        }
+        return true
+    }
+
     /* ---- Account and onboarding ---- */
 
     /** Installs from before onboarding existed (limits already set) count as onboarded. */
@@ -250,6 +264,7 @@ class AnteBridge(
     private fun validPkg(pkg: String?): Boolean = isValidPackage(pkg)
 
     companion object {
+        private val OUTSIDE_LINKS = setOf("https://ko-fi.com/peteracz", "mailto:peter.racz.rhr@gmail.com")
         private const val WAIT_MS = 30_000L
         private const val WAIT_VALID_MS = 10 * 60_000L
 

@@ -1,3 +1,4 @@
-Inter — Copyright 2016 The Inter Project Authors (https://github.com/rsms/inter)
+Geist — Copyright 2024 The Geist Project Authors (https://github.com/vercel/geist-font)
+Doto — Copyright 2024 The Doto Project Authors (https://github.com/oliverlalan/Doto)
 
-Licensed under the SIL Open Font License, Version 1.1: https://openfontlicense.org
+Both licensed under the SIL Open Font License, Version 1.1: https://openfontlicense.org

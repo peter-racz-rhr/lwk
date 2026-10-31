@@ -22,10 +22,11 @@ object Codec {
         put("parked", JSONObject().apply { s.parked.forEach { (k, v) -> put(k, v) } })
         put("dayStartMs", s.dayStartMs)
         put("usedTodaySec", s.usedTodaySec)
+        put("usedTodayByApp", mapJson(s.usedTodayByApp))
         put("wonTodaySec", s.wonTodaySec)
         put("lostTodaySec", s.lostTodaySec)
         put("history", JSONArray().apply {
-            s.history.forEach { put(JSONObject().put("day", it.day).put("usedSec", it.usedSec).put("wonSec", it.wonSec).put("lostSec", it.lostSec)) }
+            s.history.forEach { put(JSONObject().put("day", it.day).put("usedSec", it.usedSec).put("wonSec", it.wonSec).put("lostSec", it.lostSec).put("byApp", mapJson(it.byApp))) }
         })
         put("strict", s.strict)
         put("settingsPassUntilMs", s.settingsPassUntilMs)
@@ -59,11 +60,12 @@ object Codec {
                 } ?: emptyMap(),
                 dayStartMs = o.optLong("dayStartMs", 0),
                 usedTodaySec = o.optInt("usedTodaySec", 0),
+                usedTodayByApp = intMap(o.optJSONObject("usedTodayByApp")),
                 wonTodaySec = o.optInt("wonTodaySec", 0),
                 lostTodaySec = o.optInt("lostTodaySec", 0),
                 history = o.optJSONArray("history").objects().mapNotNull { j ->
                     val day = j.optString("day", "")
-                    if (day.isEmpty()) null else DaySummary(day, j.optInt("usedSec", 0), j.optInt("wonSec", 0), j.optInt("lostSec", 0))
+                    if (day.isEmpty()) null else DaySummary(day, j.optInt("usedSec", 0), j.optInt("wonSec", 0), j.optInt("lostSec", 0), intMap(j.optJSONObject("byApp")))
                 },
                 strict = o.optBoolean("strict", false),
                 settingsPassUntilMs = o.optLong("settingsPassUntilMs", 0),
@@ -75,6 +77,11 @@ object Codec {
             BankState()
         }
     }
+
+    private fun mapJson(m: Map<String, Int>) = JSONObject().apply { m.forEach { (k, v) -> put(k, v) } }
+
+    private fun intMap(j: JSONObject?): Map<String, Int> =
+        j?.keys()?.asSequence()?.associateWith { j.optInt(it, 0) } ?: emptyMap()
 
     private fun JSONArray?.objects(): List<JSONObject> {
         if (this == null) return emptyList()

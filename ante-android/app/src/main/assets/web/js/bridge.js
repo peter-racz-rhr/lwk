@@ -28,6 +28,7 @@
       signInWithGoogle: () => N.signInWithGoogle(),
       signOut: () => N.signOut(),
       finishOnboarding: () => N.finishOnboarding(),
+      openLink: url => N.openLink(url),
       startWait: () => N.startWait(),
       waitLeftMs: () => Number(N.waitLeftMs()),
       setStrict: on => N.setStrict(!!on),
@@ -64,7 +65,8 @@
       const wave = Math.sin(i / 9) * 900 + Math.sin(i / 2.3) * 500;
       const used = Math.max(0, Math.round(3000 + wave + ((i * 7919) % 1300) - Math.min(i, 60) * -8));
       const won = (i * 37) % 5 === 0 ? 300 + (i % 4) * 120 : 0, lost = (i * 13) % 3 === 0 ? 300 : 60;
-      out.push({ day: key, usedSec: used, wonSec: won, lostSec: lost });
+      const ig = Math.round(used * (0.42 + 0.12 * Math.sin(i / 5))), yt = Math.round(used * (0.33 + 0.1 * Math.cos(i / 7)));
+      out.push({ day: key, usedSec: used, wonSec: won, lostSec: lost, byApp: { "com.instagram.android": ig, "com.google.android.youtube": yt, "com.zhiliaoapp.musically": Math.max(0, used - ig - yt) } });
     }
     return out;
   }
@@ -86,6 +88,7 @@
       parked: {},
       strict: false,
       usedTodaySec: 2160,
+      usedTodayByApp: { "com.instagram.android": 360, "com.google.android.youtube": 1180, "com.zhiliaoapp.musically": 620 },
       history: sampleHistory(),
     };
   }
@@ -115,7 +118,8 @@
     context: () => {
       if (ctx.mode !== "block" || !ctx.pkg) return { mode: ctx.mode, platform: "browser" };
       const a = apps.find(x => x.pkg === ctx.pkg);
-      return { mode: "block", platform: "browser", pkg: ctx.pkg, label: a ? a.label : ctx.pkg, icon: a ? a.icon : "", note: ctx.note };
+      const known = { "com.android.settings": "Settings", "com.google.android.packageinstaller": "Package installer" };
+      return { mode: "block", platform: "browser", pkg: ctx.pkg, label: a ? a.label : known[ctx.pkg] || ctx.pkg, icon: a ? a.icon : "", note: ctx.note };
     },
     apps: () => apps.slice(),
     icon: pkg => (apps.find(a => a.pkg === pkg) || {}).icon || "",
@@ -177,6 +181,7 @@
     },
     signOut() { Object.assign(ACCT, { signedIn: false, name: "", email: "" }); saveAcct(); },
     finishOnboarding() { ACCT.onboarded = true; saveAcct(); },
+    openLink(url) { if (/^(https:\/\/ko-fi\.com\/peteracz|mailto:peter\.racz\.rhr@gmail\.com)$/.test(url)) window.open(url, "_blank", "noopener"); return true; },
     // Strict mode. ?wait=1 shortens the 30 s wait to 1 s for tests.
     startWait: () => { waitStart = Date.now(); },
     waitLeftMs: () => (waitStart ? Math.max(0, waitStart + WAIT - Date.now()) : -1),
