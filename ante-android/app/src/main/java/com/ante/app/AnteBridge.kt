@@ -129,8 +129,12 @@ class AnteBridge(
     @JavascriptInterface
     fun startWait() { waitStartedAt = Bank.now() }
 
+    /** Milliseconds until the wait is over; -1 when no wait is running (used, expired or never started). */
     @JavascriptInterface
-    fun waitLeftMs(): Long = (waitStartedAt + WAIT_MS - Bank.now()).coerceAtLeast(0)
+    fun waitLeftMs(): Long {
+        if (waitStartedAt == 0L || Bank.now() - waitStartedAt > WAIT_VALID_MS) return -1
+        return (waitStartedAt + WAIT_MS - Bank.now()).coerceAtLeast(0)
+    }
 
     private fun waitDone(): Boolean {
         val since = Bank.now() - waitStartedAt

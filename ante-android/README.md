@@ -70,7 +70,7 @@ The app uses no AndroidX or other libraries, only the Android framework.
 
 | Command | What it checks |
 |---|---|
-| `./gradlew test` | 46 JUnit tests: time accounting, JSON codec, tamper-proof clock, and a 120,000-step fuzz of the blocking rules |
+| `./gradlew test` | 54 JUnit tests: time accounting, JSON codec, tamper-proof clock, and a 120,000-step fuzz of the blocking rules |
 | `node --test web-tests/games.test.js` | 14 tests of game rules and returns (exact slots return, roulette 36/37, simulated blackjack) |
 | `node web-tests/e2e.js` | Full UI run in Chromium with Playwright and the browser mock |
 

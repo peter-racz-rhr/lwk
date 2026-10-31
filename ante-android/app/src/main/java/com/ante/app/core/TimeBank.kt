@@ -36,7 +36,11 @@ class TimeBank(initial: BankState = BankState()) {
     fun rolloverIfDue(nowMs: Long, zone: ZoneId): Boolean {
         val date = Instant.ofEpochMilli(nowMs).atZone(zone).toLocalDate()
         val today = date.toString()
-        if (today == state.day) return false
+        if (today == state.day) {
+            // Saves from before the 23 h gate existed: give today its start so the gate applies now.
+            if (state.dayStartMs == 0L) state = state.copy(dayStartMs = date.atStartOfDay(zone).toInstant().toEpochMilli())
+            return false
+        }
         if (state.dayStartMs != 0L && nowMs < state.dayStartMs + MIN_DAY_MS) return false
         rollover(today)
         state = state.copy(dayStartMs = date.atStartOfDay(zone).toInstant().toEpochMilli())

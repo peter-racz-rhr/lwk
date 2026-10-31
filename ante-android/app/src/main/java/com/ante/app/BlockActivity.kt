@@ -81,7 +81,6 @@ class BlockActivity : Activity() {
             private set
 
         fun show(context: Context, pkg: String, note: String?) {
-            if (visiblePkg == pkg && note == null) return
             val i = Intent(context, BlockActivity::class.java)
                 .putExtra(EXTRA_PKG, pkg)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)

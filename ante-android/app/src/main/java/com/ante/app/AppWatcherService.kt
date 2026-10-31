@@ -34,7 +34,7 @@ class AppWatcherService : AccessibilityService() {
     override fun onServiceConnected() {
         super.onServiceConnected()
         Bank.init(this)
-        watcher = Watcher(packageName, GUARDED)
+        watcher = Watcher(packageName, passable = PASSABLE, locked = LOCKED)
         instance = this
         homePackages = findHomePackages()
         val filter = IntentFilter().apply {
@@ -55,8 +55,11 @@ class AppWatcherService : AccessibilityService() {
             onTick()
             return
         }
-        val ignored = pkg in IGNORED || pkg == currentKeyboard()
-        val isActivity = !ignored && isActivityWindow(pkg, event.className?.toString())
+        val cls = event.className?.toString()
+        // Settings' Internet and Volume panels pop up over other apps; never lock them.
+        val panel = pkg == "com.android.settings" && cls != null && cls.contains("Panel")
+        val ignored = pkg in IGNORED || pkg == currentKeyboard() || panel
+        val isActivity = !ignored && isActivityWindow(pkg, cls)
         val action = Bank.editAt { bank, now -> watcher.onWindow(bank, pkg, isActivity, ignored, pkg in homePackages, now) }
         act(action)
         scheduleExpiry()
@@ -74,13 +77,14 @@ class AppWatcherService : AccessibilityService() {
         super.onDestroy()
     }
 
-    /** Wakes up when the current session's time is up. */
+    /** Wakes up when the current session's time, or a strict-mode Settings pass, runs out. */
     fun scheduleExpiry() {
         handler.post {
             handler.removeCallbacks(expiryCheck)
-            val session = Bank.read { it.state.session } ?: return@post
-            val delay = (session.endsAtMs - Bank.now()).coerceAtLeast(0) + 250
-            handler.postDelayed(expiryCheck, delay)
+            val now = Bank.now()
+            val (session, passUntil) = Bank.read { it.state.session to (if (it.state.strict) it.state.settingsPassUntilMs else 0L) }
+            val next = listOfNotNull(session?.endsAtMs, passUntil.takeIf { it > now }).minOrNull() ?: return@post
+            handler.postDelayed(expiryCheck, (next - now).coerceAtLeast(0) + 250)
         }
     }
 
@@ -142,9 +146,16 @@ class AppWatcherService : AccessibilityService() {
         private const val BLOCK_DELAY_MS = 120L
         private val IGNORED = setOf("com.android.systemui", "android")
 
-        /** Covered in strict mode: where the watcher could be switched off or Ante uninstalled. */
-        private val GUARDED = setOf(
+        /** Strict mode: open for two minutes after a 30 s wait. Places where blocking could be switched off. */
+        private val PASSABLE = setOf(
             "com.android.settings",
+            "com.android.vending", // Play Store can uninstall apps
+            "com.samsung.android.lool", // Samsung Device care
+            "com.miui.securitycenter",
+        )
+
+        /** Strict mode: the uninstaller stays covered until strict mode is turned off. */
+        private val LOCKED = setOf(
             "com.google.android.packageinstaller",
             "com.android.packageinstaller",
             "com.samsung.android.packageinstaller",

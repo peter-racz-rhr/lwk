@@ -195,10 +195,14 @@
 
   /* A short pause before a blocked app can be opened, the way delay apps break the habit loop. */
   const BREATH_S = Number(new URLSearchParams(location.search).get("breath") || 5);
-  const breathEnds = Date.now() + BREATH_S * 1000;
+  let breathEnds = 0, breathTimer = null;
   const breathLeft = () => Math.max(0, Math.ceil((breathEnds - Date.now()) / 1000));
-  if (BLOCK && BREATH_S > 0) {
-    const t = setInterval(() => {
+  /* Restarted every time the block screen comes back, even when the page is reused. */
+  function startBreath() {
+    if (!BLOCK || BREATH_S <= 0) return;
+    breathEnds = Date.now() + BREATH_S * 1000;
+    clearInterval(breathTimer);
+    breathTimer = setInterval(() => {
       const b = document.getElementById("open-app");
       const left = breathLeft();
       if (b) {
@@ -206,16 +210,17 @@
         b.disabled = left > 0;
         b.textContent = left > 0 ? `Take a breath · ${left}` : `Open ${CTX.label || (l && l.label) || "app"} · ${fmt(ui.openPick)}`;
       }
-      if (left <= 0) clearInterval(t);
+      if (left <= 0) clearInterval(breathTimer);
     }, 250);
   }
+  startBreath();
 
   function vGuard() {
     const installer = /packageinstaller/.test(CTX.pkg || "");
     return `<div class="screen block" id="screen">
       <div class="block-top"><span class="appicon xl lockicon" aria-hidden="true">${ICON.lock}</span><p class="eyebrow">Strict mode</p>
-        <h1 class="h1">${installer ? "Uninstalling is locked" : "Settings is locked"}</h1></div>
-      <p class="muted">${installer ? "Strict mode keeps Ante installed. To remove it, turn off Strict mode in Ante first, which takes a 30-second wait." : "Strict mode covers Settings so blocking can't be switched off on impulse. Wait 30 seconds to use Settings for 2 minutes."}</p>
+        <h1 class="h1">${installer ? "Installing and removing apps is locked" : `${esc(CTX.label || "Settings")} is locked`}</h1></div>
+      <p class="muted">${installer ? "Strict mode keeps Ante installed. To install or remove apps, turn off Strict mode in Ante first. That takes a 30-second wait." : "Strict mode covers this so blocking can't be switched off on impulse. Wait 30 seconds to use it for 2 minutes."}</p>
       <div class="grow"></div>
       ${installer ? `<button class="btn primary" data-a="openAnte">Open Ante</button>` : `<button class="btn primary" data-a="guardWait">Start the 30-second wait</button>`}
       <button class="btn ghost" data-a="closeBlock">Back to home screen</button>
@@ -270,7 +275,9 @@
     clearInterval(waitTimer);
     const tick = () => {
       if (!ui.sheet || ui.sheet.type !== "wait") { clearInterval(waitTimer); return; }
-      ui.sheet.left = Number(A.waitLeftMs());
+      let left = Number(A.waitLeftMs());
+      if (left < 0) { A.startWait(); left = 30000; } // the wait was used or expired: start a fresh one
+      ui.sheet.left = left;
       const n = document.getElementById("wait-n"), b = document.getElementById("wait-go"), ring = document.getElementById("wait-ring");
       if (n) n.textContent = Math.ceil(ui.sheet.left / 1000);
       if (ring) ring.style.setProperty("--p", String(1 - ui.sheet.left / 30000));
@@ -294,8 +301,8 @@
     if (sh.type === "strict") {
       return `<div class="scrim" data-a="closeSheet"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="strict-s" data-stop>
         <div class="sheet-head"><h2 class="h2" id="strict-s">Turn on Strict mode</h2><button class="iconbtn" data-a="closeSheet" aria-label="Close">${ICON.close}</button></div>
-        <ul class="facts"><li>Opening Settings shows a block screen. After a 30-second wait you get 2 minutes.</li>
-          <li>The uninstall screen is covered. Ante can only be removed after Strict mode is off.</li>
+        <ul class="facts"><li>Opening Settings shows a block screen. After a 30-second wait you get 2 minutes, then it is covered again.</li>
+          <li>The Play Store opens the same way. The install and uninstall screen stays covered until Strict mode is off.</li>
           <li>Turning Strict mode off takes the same 30-second wait.</li>
           <li>Quick settings in the notification shade keep working, so Wi-Fi, flashlight and emergency calls are never locked.</li></ul>
         <div class="btn-row"><button class="btn quiet" data-a="closeSheet">Not now</button><button class="btn primary" data-a="agreeStrict">Turn on</button></div>
@@ -691,6 +698,7 @@
     return false;
   };
   window.anteRefresh = function () {
+    if (BLOCK && ui.view === "block") startBreath();
     if (ui.busy || ui.round) return;
     refresh();
     if (ui.view === "game") renderControls(); else render();

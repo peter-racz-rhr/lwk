@@ -66,8 +66,18 @@ object Bank {
         }
     }
 
+    /** Increments on every boot, so a reboot is noticed even when the new uptime is longer. */
+    private fun bootCount(): Int {
+        val c = app ?: return -1
+        return try {
+            Settings.Global.getInt(c.contentResolver, Settings.Global.BOOT_COUNT, -1)
+        } catch (e: Exception) {
+            -1
+        }
+    }
+
     private fun tick(b: TimeBank): Long {
-        val r = TrustedClock.tick(b.state.clock, System.currentTimeMillis(), SystemClock.elapsedRealtime(), autoTimeOn())
+        val r = TrustedClock.tick(b.state.clock, System.currentTimeMillis(), SystemClock.elapsedRealtime(), bootCount(), autoTimeOn())
         b.setClock(r.anchor)
         return r.nowMs
     }

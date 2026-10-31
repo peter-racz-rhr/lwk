@@ -137,7 +137,8 @@ class WatcherStressTest {
 
     private val settings = "com.android.settings"
     private val installer = "com.google.android.packageinstaller"
-    private fun strictWatcher() = Watcher(own, guarded = setOf(settings, installer))
+    private val store = "com.android.vending"
+    private fun strictWatcher() = Watcher(own, passable = setOf(settings, store), locked = setOf(installer))
 
     @Test fun strictModeCoversSettingsAndUninstall() {
         val (bank, _) = setup()
@@ -158,6 +159,36 @@ class WatcherStressTest {
         assertEquals(Watcher.Action.None, w.onWindow(bank, settings, true, false, false, 11_000))
         w.onWindow(bank, home, true, false, true, 20_000)
         assertTrue(w.onWindow(bank, settings, true, false, false, 10_000 + TimeBank.SETTINGS_PASS_MS) is Watcher.Action.Block)
+    }
+
+    @Test fun settingsPassRunsOutWhileStillOnTheScreen() {
+        val (bank, _) = setup()
+        val w = strictWatcher()
+        bank.setStrict(true)
+        bank.grantSettingsPass(0)
+        assertEquals(Watcher.Action.None, w.onWindow(bank, settings, true, false, false, 1_000))
+        assertEquals(Watcher.Action.None, w.onTimer(bank, TimeBank.SETTINGS_PASS_MS - 1))
+        val a = w.onTimer(bank, TimeBank.SETTINGS_PASS_MS)
+        assertTrue(a is Watcher.Action.Block && a.pkg == settings && a.note == Watcher.GUARD_NOTE)
+    }
+
+    @Test fun settingsPassDoesNotUnlockTheUninstaller() {
+        val (bank, _) = setup()
+        val w = strictWatcher()
+        bank.setStrict(true)
+        bank.grantSettingsPass(0)
+        w.onWindow(bank, settings, true, false, false, 1_000)
+        val a = w.onWindow(bank, installer, true, false, false, 2_000)
+        assertTrue(a is Watcher.Action.Block && a.pkg == installer)
+    }
+
+    @Test fun leavingSettingsDoesNotBlockTheHomeScreen() {
+        val (bank, _) = setup()
+        val w = strictWatcher()
+        bank.setStrict(true)
+        bank.grantSettingsPass(0)
+        w.onWindow(bank, settings, true, false, false, 1_000)
+        assertEquals(Watcher.Action.None, w.onWindow(bank, home, true, false, true, TimeBank.SETTINGS_PASS_MS + 5))
     }
 
     @Test fun strictModeSurvivesARestart() {

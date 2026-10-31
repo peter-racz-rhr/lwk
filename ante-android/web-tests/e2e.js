@@ -221,14 +221,14 @@ async function noOverflow(p, label) {
   check(st.errors.length === 0, "no console errors in strict flow: " + st.errors.join(" | "));
 
   const gs = await page(browser, "?mode=block&pkg=com.android.settings&note=strict&acc=1&wait=1");
-  check(await gs.isVisible("text=Settings is locked"), "strict mode covers Settings");
+  check(await gs.isVisible("text=is locked"), "strict mode covers Settings");
   await shot(gs, "25-guard-settings");
   await gs.click('[data-a="guardWait"]');
   check(await gs.evaluate(() => window.Ante.openGuarded("com.android.settings")) === false, "Settings stays shut before the wait ends");
   await gs.waitForSelector("#wait-go:not([disabled])", { timeout: 3000 });
   await gs.click("#wait-go");
   const gi = await page(browser, "?mode=block&pkg=com.google.android.packageinstaller&note=strict&acc=1");
-  check(await gi.isVisible("text=Uninstalling is locked"), "strict mode covers the uninstaller");
+  check(await gi.isVisible("text=Installing and removing apps is locked"), "strict mode covers the uninstaller");
   check(gs.errors.length + gi.errors.length === 0, "no console errors on guard screens");
 
   /* Small phone + reduced motion */

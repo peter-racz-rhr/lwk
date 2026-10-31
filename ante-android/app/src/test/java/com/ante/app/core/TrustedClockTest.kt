@@ -19,6 +19,41 @@ class TrustedClockTest {
         assertEquals(1000, c.nowMs)
     }
 
+    @Test fun forgedJumpWithAutomaticTimeOnIsIgnored() {
+        // Offline: switch automatic time off, move the date 2 days ahead, switch it back on.
+        var c = TrustedClock.tick(ClockAnchor(), wallMs = at(2026, 10, 31, 22), elapsedMs = 10_000, autoTime = true)
+        c = TrustedClock.tick(c.anchor, wallMs = at(2026, 11, 2, 22), elapsedMs = 70_000, autoTime = true)
+        assertEquals(at(2026, 10, 31, 22) + 60_000, c.nowMs)
+        // Network comes back and corrects the wall clock: no freeze, time keeps moving.
+        c = TrustedClock.tick(c.anchor, wallMs = at(2026, 10, 31, 22) + 120_000, elapsedMs = 130_000, autoTime = true)
+        assertEquals(at(2026, 10, 31, 22) + 120_000, c.nowMs)
+    }
+
+    @Test fun smallNetworkCorrectionsAreAccepted() {
+        var c = TrustedClock.tick(ClockAnchor(), wallMs = 1_000_000, elapsedMs = 0, autoTime = true)
+        c = TrustedClock.tick(c.anchor, wallMs = 1_000_000 + 60_000 + 20_000, elapsedMs = 60_000, autoTime = true)
+        assertEquals(1_080_000, c.nowMs)
+    }
+
+    @Test fun rebootIsDetectedByBootCountEvenWithLongUptime() {
+        var c = TrustedClock.tick(ClockAnchor(), wallMs = at(2026, 10, 31, 22), elapsedMs = 1_000, bootCount = 7, autoTime = false)
+        // Rebooted, phone was on longer this time; the wall date was pushed ahead.
+        c = TrustedClock.tick(c.anchor, wallMs = at(2026, 11, 2, 22), elapsedMs = 9_000_000, bootCount = 8, autoTime = false)
+        assertEquals(at(2026, 10, 31, 22), c.nowMs)
+    }
+
+    @Test fun rebootWithAutomaticTimeTrustsTheNetworkClock() {
+        var c = TrustedClock.tick(ClockAnchor(), wallMs = at(2026, 10, 31, 22), elapsedMs = 5_000_000, bootCount = 3, autoTime = true)
+        c = TrustedClock.tick(c.anchor, wallMs = at(2026, 11, 1, 8), elapsedMs = 20_000, bootCount = 4, autoTime = true)
+        assertEquals(at(2026, 11, 1, 8), c.nowMs)
+    }
+
+    @Test fun oldSaveGetsItsDayStartOnTheSameDay() {
+        val b = TimeBank(BankState(day = "2026-10-31"))
+        b.rolloverIfDue(at(2026, 10, 31, 13), zone)
+        assertEquals(at(2026, 10, 31, 0), b.state.dayStartMs)
+    }
+
     @Test fun manualClockJumpForwardIsIgnored() {
         var c = TrustedClock.tick(ClockAnchor(), wallMs = at(2026, 10, 31, 22), elapsedMs = 10_000, autoTime = false)
         // User sets the phone to tomorrow; only 60 s really passed.

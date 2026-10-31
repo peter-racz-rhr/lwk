@@ -141,7 +141,7 @@
     haptic: () => {},
     // Strict mode. ?wait=1 shortens the 30 s wait to 1 s for tests.
     startWait: () => { waitStart = Date.now(); },
-    waitLeftMs: () => Math.max(0, waitStart + WAIT - Date.now()),
+    waitLeftMs: () => (waitStart ? Math.max(0, waitStart + WAIT - Date.now()) : -1),
     setStrict(on) {
       if (!on && S.strict && !(waitStart && Date.now() - waitStart >= WAIT)) return false;
       S.strict = !!on; waitStart = 0; save(); return true;
