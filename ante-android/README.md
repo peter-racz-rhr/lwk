@@ -1,5 +1,7 @@
 # Ante
 
+> **Moved:** Ante now lives in its own repository, https://github.com/peter-racz-rhr/ante-app. Updates and builds happen there; this copy is no longer updated.
+
 Ante is an Android screen-time app. You give apps a daily budget. When you open one of them, Ante covers it
 with a block screen that shows the time left. From there you can open the app for a set number of minutes,
 or stake some of those minutes at a casino table. You can play roulette, blackjack, slots, video poker or
