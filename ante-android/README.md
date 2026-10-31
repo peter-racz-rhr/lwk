@@ -1,0 +1,88 @@
+# Ante
+
+Ante is an Android screen-time app. You give apps a daily budget. When you open one of them, Ante covers it
+with a block screen that shows the time left. From there you can open the app for a set number of minutes,
+or stake some of those minutes at a casino table. You can play roulette, blackjack, slots, video poker or
+coin flip. Wins go back to that app's budget, and losses are gone for the day. Every table has a small house
+edge, so playing tends to cut screen time. No real money is involved.
+
+## Build the APK in Android Studio
+
+1. Open Android Studio (Ladybug 2024.2 or newer) and choose **File → Open**, then pick this `ante-android` folder.
+2. Let Gradle sync finish. The first sync downloads Gradle 8.11.1, Android Gradle Plugin 8.7.3 and SDK 35.
+   If Studio asks to install SDK Platform 35, accept.
+3. **Debug APK:** use **Build → Build App Bundle(s) / APK(s) → Build APK(s)**. The file lands in
+   `app/build/outputs/apk/debug/app-debug.apk`.
+4. **Release APK:** use **Build → Generate Signed App Bundle / APK…**, or run `./gradlew assembleRelease`.
+   The release build is signed with the debug key so it installs right away. Use your own keystore before
+   you publish anywhere.
+5. Install it on a phone with **Run ▶** or `adb install app/build/outputs/apk/debug/app-debug.apk`.
+
+From a terminal: `./gradlew assembleDebug`, and `./gradlew test` for the unit tests.
+
+## First run on the phone
+
+1. Open Ante and tap **Open Accessibility settings**. Find **Ante app limits** and switch it on.
+2. **If the switch is greyed out:** Android 13 and newer block this switch for apps installed from an APK.
+   Go to **Settings → Apps → Ante**, tap **⋮**, then tap **Allow restricted settings**, and try the switch again.
+   Ante's permission card has a button that opens this page.
+3. Add a limit, for example Instagram at 20:00, then open Instagram to see the block screen.
+
+Ante's accessibility service only asks for window-change events. It never reads screen content
+(`canRetrieveWindowContent="false"`).
+
+## How it is built
+
+| Part | Where | What it does |
+|---|---|---|
+| `TimeBank` | `app/src/main/java/com/ante/app/core` | All time accounting: limits, sessions, bets, midnight reset. Pure Kotlin. |
+| `Bank` | `…/Bank.kt` | Shares one `TimeBank` across the process and saves it to SharedPreferences. |
+| `AppWatcherService` | `…/AppWatcherService.kt` | Accessibility service. Sees the front app, shows the block screen, ends sessions. |
+| `BlockActivity` | `…/BlockActivity.kt` | Covers a limited app in its own task, so Back never lands in the app. |
+| `MainActivity` | `…/MainActivity.kt` | Ante's own screen. |
+| `AnteBridge` | `…/AnteBridge.kt` | The `window.AnteNative` JavaScript interface. Validates every argument. |
+| Web UI | `app/src/main/assets/web` | Today, limits, block screen and the animated tables. Works offline. |
+
+How time works:
+
+- **Opening an app for N minutes** reserves N minutes.
+- **Leaving early** refunds the unused part as soon as another app comes to the front.
+- **Running out of session time** while still in the app brings the block screen back.
+- **Payout cap:** a payout can never be more than 100× its stake, and a payout with no matching stake is ignored.
+
+The app uses no AndroidX or other libraries, only the Android framework.
+
+### Returns per table
+
+| Table | Rules | Return |
+|---|---|---|
+| Roulette | Single zero, 37 pockets | 97.3% |
+| Blackjack | 6 decks, dealer stands on all 17s, pays 3 to 2, double on any two cards | about 99% |
+| Slots | 3 weighted reels, three 7s pay 100× | 93.0% (exact) |
+| Video poker | Jacks or better, royal pays 250× | about 96% |
+| Coin flip | Pays 1.9× | 95% |
+
+## Tests
+
+| Command | What it checks |
+|---|---|
+| `./gradlew test` | 22 JUnit tests for `TimeBank` and the JSON codec |
+| `node --test web-tests/games.test.js` | 14 tests of game rules and returns (exact slots return, roulette 36/37, simulated blackjack) |
+| `node web-tests/e2e.js` | Full UI run in Chromium with Playwright and the browser mock |
+
+The e2e run covers adding a limit, every table, the block screen, the empty state, 340px width and
+reduced motion. It fails on any console error or horizontal scroll. Install Playwright first with
+`npm i -D playwright`.
+
+To try the UI in a desktop browser, open `app/src/main/assets/web/index.html`. Add
+`?mode=block&pkg=com.instagram.android` to the address to see the block screen.
+
+## Known limits
+
+- **Google Play:** apps that use an AccessibilityService for something other than helping people with
+  disabilities have to pass Play's accessibility review and show a prominent disclosure. Sideloading the APK
+  is not affected.
+- **Detection gap:** a few apps open without a normal activity window change, which can delay detection.
+- **No sounds yet.** Haptics are on.
+
+Fonts: Big Shoulders Display and Hanken Grotesk, both under the SIL Open Font License (`assets/web/fonts/OFL.txt`).
