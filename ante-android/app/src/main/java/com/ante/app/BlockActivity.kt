@@ -31,6 +31,12 @@ class BlockActivity : Activity() {
         if (pkg != before) web?.loadUrl(WebHost.START_URL) else WebHost.refresh(web)
     }
 
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        // Dialogs, the keyboard and the Google sheet can bring the bars back; hide them again.
+        if (hasFocus) WebHost.immersive(this)
+    }
+
     override fun onResume() {
         super.onResume()
         visiblePkg = pkg

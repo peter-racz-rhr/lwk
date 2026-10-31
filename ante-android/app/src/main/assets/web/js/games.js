@@ -36,6 +36,21 @@
     if (!b) return 0;
     return b.wins(n) ? b.multiple : 0;
   }
+  /** A bet id is an outside bet ("red", "d2", ...) or one number, "n:0" to "n:36". */
+  const NUM_BET = /^n:(\d{1,2})$/;
+  function isRouletteBet(id) {
+    if (typeof id !== "string") return false;
+    if (Object.prototype.hasOwnProperty.call(ROULETTE_BETS, id)) return true;
+    const m = NUM_BET.exec(id);
+    return !!m && Number(m[1]) <= 36;
+  }
+  /** Total multiple for several equal stakes on one spin: each winning bet adds its own multiple. */
+  function rouletteReturn(bets, n) {
+    return [...new Set(bets)].filter(isRouletteBet).reduce((sum, id) => {
+      const m = NUM_BET.exec(id);
+      return sum + (m ? rouletteMultiple("num", n, Number(m[1])) : rouletteMultiple(id, n));
+    }, 0);
+  }
   function rouletteSpin(rng) { return rand(37, rng); }
 
   /* ---------- slots ---------- */
@@ -168,7 +183,7 @@
 
   const api = {
     GAMES, COIN_RETURN, coinFlip,
-    WHEEL, REDS, ROULETTE_BETS, STRAIGHT_MULTIPLE, pocketColor, rouletteMultiple, rouletteSpin,
+    WHEEL, REDS, ROULETTE_BETS, STRAIGHT_MULTIPLE, pocketColor, rouletteMultiple, isRouletteBet, rouletteReturn, rouletteSpin,
     SLOT_SYMBOLS, SLOT_WEIGHTS, SLOT_THREE, SLOT_TWO_SEVENS, SLOT_PAIR, slotSymbol, slotSpin, slotPay, slotReturn,
     SUITS, rankLabel, isRed, shuffledDeck,
     handValue, isBlackjack, newShoe, dealerPlay, blackjackMultiple,

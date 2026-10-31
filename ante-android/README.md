@@ -162,7 +162,7 @@ table's header mutes them, and the choice is remembered.
 - **Detection gap:** a few apps open without a normal activity window change, which can delay detection.
 - **No sounds yet.** Haptics are on.
 
-Fonts: Geist (interface) and Doto (the dot-matrix clocks), both under the SIL Open Font License (`assets/web/fonts/OFL.txt`).
+Fonts: Geist (interface) and Bitcount Grid Double (the dot-matrix clocks), both under the SIL Open Font License (`assets/web/fonts/OFL.txt`).
 Themes: Neutral plus the four [Catppuccin](https://catppuccin.com) flavours (Latte, Frappé, Macchiato, Mocha), MIT licensed.
 Design credits: the floating pill navigation and the morphing sign-in are original code, inspired by
 [Skiper UI](https://skiper-ui.com) components 43 (Vercel tooltip) and 21. The card layouts follow

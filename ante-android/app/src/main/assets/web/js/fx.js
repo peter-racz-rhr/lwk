@@ -216,10 +216,14 @@
     let wheelA = 0, ballA = -Math.PI / 2, ballR = 0, highlight = -1, showBall = false;
 
     function setup() {
-      const w = Math.min(host.clientWidth || 300, MAX, Math.round(window.innerHeight * 0.5));
-      dpr = Math.min(2, window.devicePixelRatio || 1);
+      // Size from the box the wheel really gets, and let CSS keep it square (aspect-ratio 1),
+      // so a narrow box shrinks both sides instead of squashing it into an oval.
+      const wrap = cv.parentNode;
+      const avail = Math.min(wrap.clientWidth || host.clientWidth || 300, host.clientWidth || 300);
+      const w = Math.max(80, Math.min(avail, MAX, Math.round(window.innerHeight * 0.5)));
+      dpr = Math.min(3, window.devicePixelRatio || 1);
       size = w; R = w / 2;
-      cv.style.width = cv.style.height = w + "px";
+      cv.style.width = w + "px"; cv.style.height = "auto";
       cv.width = cv.height = Math.round(w * dpr);
       stator = drawStator(); rotor = drawRotor();
       ballR = highlight >= 0 ? R * 0.655 : R * 0.85; // keep a landed ball in its pocket across resizes
@@ -329,6 +333,9 @@
         const b0 = ballA;
         let B = b0 - pocketScreen;
         while (B < Math.PI * 2 * 8) B += Math.PI * 2; // ball travels 8+ turns the other way
+        // Free flight ends exactly TURNS full turns away from the pocket. Taking those turns out
+        // of the blend makes the ball ease into its pocket instead of whipping round them again.
+        const TURNS = Math.round((B - (b0 - pocketScreen)) / (Math.PI * 2)) * Math.PI * 2;
         const rim = R * 0.85, pocket = R * 0.655;
         let lastPocket = -1, dropped = false;
         sfx("wheelSpin");
@@ -346,7 +353,7 @@
             } else ballR = pocket;
             const locked = wheelA + index * STEP - Math.PI / 2;
             const s = t < 0.8 ? 0 : smooth((t - 0.8) / 0.2);
-            ballA = free + (locked - free) * s;
+            ballA = free + (locked - TURNS - free) * s;
             if (onTick && t > 0.55) {
               const rel = Math.round(((((ballA - wheelA + Math.PI / 2) / STEP) % N) + N) % N);
               if (rel !== lastPocket) { lastPocket = rel; if (t < 0.85) { onTick(); sfx("ballTick"); } }
@@ -374,11 +381,22 @@
   /* ---------- slot machine ---------- */
   function Slots(host, initial) {
     const rows = r => [G.slotSymbol(), r, G.slotSymbol()];
-    host.innerHTML = `<div class="cabinet"><div class="reels">${initial.map(s => `<div class="reel"><div class="strip">${rows(s).map(x => `<div class="cell">${slotSvg(x)}</div>`).join("")}</div></div>`).join("")}</div><div class="payline" aria-hidden="true"></div></div>`;
+    host.innerHTML = `<div class="slot-rig"><div class="cabinet"><div class="reels">${initial.map(s => `<div class="reel"><div class="strip">${rows(s).map(x => `<div class="cell">${slotSvg(x)}</div>`).join("")}</div></div>`).join("")}</div><div class="payline" aria-hidden="true"></div></div>
+      <div class="lever" role="button" tabindex="0" aria-label="Pull the lever to spin">
+        <span class="lever-slot" aria-hidden="true"></span>
+        <span class="lever-arm" aria-hidden="true"><span class="lever-knob"></span></span>
+        <span class="lever-hub" aria-hidden="true"></span></div></div>`;
     const reels = [...host.querySelectorAll(".reel")];
+    const lever = Lever(host.querySelector(".lever"), () => {
+      // The lever is another way to press Spin: same checks, same flow.
+      const b = document.querySelector('[data-a="sSpin"]');
+      if (b && !b.disabled) { b.click(); return true; }
+      return false;
+    });
     return {
       async spin(final, onStop) {
         host.querySelector(".cabinet").classList.remove("hit");
+        lever.throwIfIdle();
         if (window.AnteSFX) window.AnteSFX.reelStart();
         const cellH = reels[0].querySelector(".cell").getBoundingClientRect().height || 72;
         const jobs = reels.map(async (reel, i) => {
@@ -408,6 +426,91 @@
         await Promise.all(jobs);
       },
       win() { host.querySelector(".cabinet").classList.add("hit"); },
+      destroy() { lever.destroy(); },
+    };
+  }
+
+  /**
+   * A one-armed-bandit lever. Drag the knob down (or tap it) and let go past the catch to spin.
+   * Seen from the front, the arm swings over its hub, so it shortens, flips, and ends below it.
+   */
+  function Lever(el, onPull) {
+    const arm = el.querySelector(".lever-arm"), knob = el.querySelector(".lever-knob");
+    const CATCH = 0.72, CLICKS = 5;
+    let p = 0, drag = null, anim = null, lastClick = 0, pulledAt = 0;
+    const travel = () => el.clientHeight * 0.5 - 14;
+    function set(v) {
+      p = Math.max(0, Math.min(1, v));
+      const k = 1 - 2 * p, safe = Math.abs(k) < 0.03 ? (k < 0 ? -0.03 : 0.03) : k;
+      arm.style.transform = `scaleY(${safe.toFixed(3)})`;
+      knob.style.transform = `scaleY(${(1 / safe).toFixed(3)})`; // keeps the ball round while the arm squashes
+      const click = Math.floor(p * CLICKS);
+      if (click > lastClick) sfx("leverClick");
+      lastClick = click;
+    }
+    function springBack() {
+      const from = p, t0 = performance.now(), T = dur(520);
+      cancelAnimationFrame(anim);
+      const step = now => {
+        const t = Math.min(1, (now - t0) / T);
+        // Damped spring: overshoots the top a little, then settles.
+        const e = 1 - Math.exp(-6 * t) * Math.cos(t * 9);
+        set(from * (1 - e)); lastClick = 0;
+        if (t < 1) anim = requestAnimationFrame(step); else { set(0); el.classList.remove("down"); }
+      };
+      anim = requestAnimationFrame(step);
+    }
+    function fire() {
+      sfx("leverPull");
+      if (window.App && window.App.haptic) window.App.haptic("tap");
+      pulledAt = performance.now();
+      const ok = onPull();
+      if (!ok) sfx("leverJam");
+      springBack();
+    }
+    /** Animates a full pull (tap, keyboard, or the Spin button), then fires once if asked. */
+    function throwArm(andFire) {
+      cancelAnimationFrame(anim); el.classList.add("down");
+      const from = p, t0 = performance.now(), T = dur(220);
+      const step = now => {
+        const t = Math.min(1, (now - t0) / T);
+        set(from + (1 - from) * (t * t));
+        if (t < 1) anim = requestAnimationFrame(step);
+        else if (andFire) fire(); else { sfx("leverPull"); springBack(); }
+      };
+      anim = requestAnimationFrame(step);
+    }
+    function down(e) {
+      if (drag || (e.pointerType === "mouse" && e.button !== 0)) return;
+      e.preventDefault();
+      cancelAnimationFrame(anim);
+      drag = { id: e.pointerId, y0: e.clientY, p0: p, moved: false };
+      el.setPointerCapture && el.setPointerCapture(e.pointerId);
+      el.classList.add("down");
+    }
+    function move(e) {
+      if (!drag || e.pointerId !== drag.id) return;
+      const dy = e.clientY - drag.y0;
+      if (Math.abs(dy) > 4) drag.moved = true;
+      set(drag.p0 + dy / Math.max(40, travel() * 2));
+    }
+    function up(e) {
+      if (!drag || e.pointerId !== drag.id) return;
+      const d = drag; drag = null;
+      if (!d.moved) { throwArm(true); return; }
+      if (e.type !== "pointercancel" && p >= CATCH) { set(1); fire(); } else springBack();
+    }
+    const key = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); throwArm(true); } };
+    el.addEventListener("pointerdown", down);
+    el.addEventListener("pointermove", move);
+    el.addEventListener("pointerup", up);
+    el.addEventListener("pointercancel", up);
+    el.addEventListener("keydown", key);
+    set(0);
+    return {
+      /** The Spin button was used: swing the lever too, unless it was just pulled by hand. */
+      throwIfIdle() { if (!drag && performance.now() - pulledAt > 400) throwArm(false); },
+      destroy() { cancelAnimationFrame(anim); },
     };
   }
 

@@ -77,6 +77,20 @@ async function noOverflow(p, label) {
   await p.waitForTimeout(200);
   await shot(p, "05-tables");
   await noOverflow(p, "tables");
+  {
+    // Drag along the nav bar from Play to Profile: the indicator follows and letting go opens Profile.
+    const a = await (await p.$('[data-t="tables"]')).boundingBox(), z = await (await p.$('[data-t="profile"]')).boundingBox();
+    await p.mouse.move(a.x + a.width / 2, a.y + a.height / 2); await p.mouse.down();
+    for (let k = 1; k <= 6; k++) await p.mouse.move(a.x + a.width / 2 + (z.x - a.x) * k / 6, a.y + a.height / 2);
+    check(await p.evaluate(() => document.querySelector(".navpill").classList.contains("dragging")), "the nav indicator follows a drag");
+    await p.mouse.up(); await p.waitForTimeout(450);
+    check(await p.evaluate(() => window.App.ui.view === "profile"), "letting go over Profile opens Profile");
+    check(!(await p.$(".navtip")), "tapping a tab shows no text label");
+    await p.click('[data-t="tables"]'); await p.waitForTimeout(250);
+    check(await p.evaluate(() => window.App.ui.view === "tables"), "a plain tap still switches tabs");
+    const sb = await p.evaluate(() => getComputedStyle(document.getElementById("screen")).scrollbarWidth);
+    check(sb === "none", "no scrollbar on the page");
+  }
 
   /* Coin */
   const ig = "com.instagram.android";
@@ -96,7 +110,31 @@ async function noOverflow(p, label) {
   await p.click('[data-a="game"][data-id="roulette"]');
   await p.waitForTimeout(200);
   await shot(p, "08-roulette");
-  await p.click('[data-a="rBet"][data-v="black"]');
+  {
+    const r = await p.evaluate(() => { const b = document.querySelector(".wheel").getBoundingClientRect(); return [b.width, b.height]; });
+    check(Math.abs(r[0] - r[1]) < 1, `roulette wheel is a circle (${r[0].toFixed(1)} × ${r[1].toFixed(1)})`);
+  }
+  await p.setViewportSize({ width: 300, height: 844 });
+  await p.waitForTimeout(250);
+  {
+    const r = await p.evaluate(() => { const b = document.querySelector(".wheel").getBoundingClientRect(); return [b.width, b.height]; });
+    check(Math.abs(r[0] - r[1]) < 1, `wheel stays round on a narrow phone (${r[0].toFixed(1)} × ${r[1].toFixed(1)})`);
+  }
+  await p.setViewportSize({ width: 390, height: 844 });
+  await p.waitForTimeout(250);
+  // Several bets at once: black, odd and the number 17.
+  await p.click('[data-a="stakeSet"][data-v="60"]'); // 3 bets × 1:00 always fits after the coin round
+  await p.click('[data-a="rClear"]');
+  await p.click('[data-a="rToggle"][data-v="black"]');
+  await p.click('[data-a="rToggle"][data-v="odd"]');
+  await p.click('[data-a="rGrid"]');
+  await p.click('[data-a="rToggle"][data-v="n:17"]');
+  check(await p.isVisible("text=Spin · 3 bets"), "three bets show on the spin button");
+  await p.click('[data-a="rToggle"][data-v="odd"]');
+  await p.click('[data-a="rToggle"][data-v="odd"]');
+  check((await p.$$('[data-a="rToggle"][aria-pressed="true"]')).length === 3, "tapping a bet twice lifts it and puts it back");
+  await shot(p, "08b-roulette-bets");
+  const per = await p.evaluate(() => window.App.ui.stake);
   before = await leftOf(p, ig);
   await p.click('[data-a="rSpin"]');
   await p.waitForTimeout(800);
@@ -105,7 +143,11 @@ async function noOverflow(p, label) {
   await shot(p, "09-roulette-spinning");
   await p.waitForSelector('[data-a="rSpin"]:not([disabled])', { timeout: 9000 });
   after = await leftOf(p, ig);
-  check(after === before - 300 || after === before + 300, `roulette even-money settles (${before} → ${after})`);
+  {
+    const n = await p.evaluate(() => window.App.ui.hist[0]);
+    const want = await p.evaluate(([n, per]) => window.AnteGames.rouletteReturn(["black", "odd", "n:17"], n) * per, [n, per]);
+    check(after === before - 3 * per + want, `three bets settle together on ${n} (${before} → ${after}, expected ${before - 3 * per + want})`);
+  }
   check(await p.isVisible(".wheel-result.show"), "winning number shows in the wheel");
   await shot(p, "10-roulette-done");
   await p.waitForFunction(() => !document.getElementById("screen").classList.contains("focus"), null, { timeout: 4000 });
@@ -117,6 +159,25 @@ async function noOverflow(p, label) {
   await p.click('[data-a="game"][data-id="slots"]');
   await p.waitForTimeout(200);
   await p.click('[data-a="stakeSet"][data-v="60"]');
+  {
+    // Pull the lever: drag the knob down past the catch.
+    const lv = await p.$(".lever"); const b = await lv.boundingBox();
+    before = await leftOf(p, ig);
+    await p.mouse.move(b.x + b.width / 2, b.y + 24);
+    await p.mouse.down();
+    for (let k = 1; k <= 8; k++) await p.mouse.move(b.x + b.width / 2, b.y + 24 + (b.height - 48) * k / 8);
+    await p.mouse.up();
+    await p.waitForTimeout(300);
+    check(await p.evaluate(() => window.App.ui.busy === true), "pulling the lever spins the reels");
+    await p.waitForSelector('[data-a="sSpin"]:not([disabled])', { timeout: 6000 });
+    await p.waitForTimeout(1900);
+    // A short drag that doesn't reach the catch springs back without spinning.
+    await p.mouse.move(b.x + b.width / 2, b.y + 24);
+    await p.mouse.down(); await p.mouse.move(b.x + b.width / 2, b.y + 50); await p.mouse.up();
+    await p.waitForTimeout(150);
+    check(await p.evaluate(() => !window.App.ui.busy), "a half pull does not spin");
+    await p.waitForTimeout(600);
+  }
   await p.click('[data-a="sSpin"]');
   await p.waitForTimeout(700);
   await shot(p, "11-slots-spinning");
@@ -277,7 +338,15 @@ async function noOverflow(p, label) {
   const ob = await page(browser, "?onboard=1&reset=1");
   check(await ob.isVisible(".ob-slide.active .ob-title"), "first launch shows the story");
   await shot(ob, "26a-story1");
-  await ob.click('[data-a="obNext"]'); await ob.waitForTimeout(650);
+  {
+    // Swipe left with a finger-like drag: the stage follows and lands on slide 2.
+    const st = await (await ob.$("#ob-stage")).boundingBox();
+    await ob.mouse.move(st.x + st.width * 0.8, st.y + 150); await ob.mouse.down();
+    for (let k = 1; k <= 8; k++) { await ob.mouse.move(st.x + st.width * (0.8 - 0.06 * k), st.y + 150); await ob.waitForTimeout(16); }
+    await shot(ob, "26a2-story-mid-swipe");
+    await ob.mouse.up(); await ob.waitForTimeout(900);
+    check(await ob.evaluate(() => window.App.ui.welcomeStep === 1), "swiping moves to the next story slide");
+  }
   await shot(ob, "26b-story2");
   await ob.click('[data-a="obNext"]'); await ob.waitForTimeout(650);
   await shot(ob, "26c-story3");

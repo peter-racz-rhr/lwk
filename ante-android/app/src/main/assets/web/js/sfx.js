@@ -76,6 +76,9 @@
     wheelSpin: () => hiss({ type: "bandpass", f: 400, f2: 160, q: 0.8, dur: 1.6, vol: 0.12 }),
     ballTick: () => { hiss({ f: 5200, q: 9, dur: 0.018, vol: 0.2 }); tone({ f: 3100 + Math.random() * 600, type: "sine", dur: 0.02, vol: 0.05 }); },
     ballDrop: () => { hiss({ f: 2400, q: 5, dur: 0.06, vol: 0.4 }); tone({ f: 900, f2: 600, type: "triangle", dur: 0.06, vol: 0.12 }); },
+    leverClick: () => { hiss({ f: 3800, q: 6, dur: 0.02, vol: 0.18 }); tone({ f: 1600, type: "square", dur: 0.012, vol: 0.03 }); },
+    leverPull: () => { tone({ f: 120, f2: 55, type: "sine", dur: 0.18, vol: 0.5 }); hiss({ f: 1400, q: 1.5, dur: 0.09, vol: 0.3 }); tone({ f: 700, f2: 420, t: 0.02, type: "triangle", dur: 0.08, vol: 0.08 }); },
+    leverJam: () => tone({ f: 160, type: "square", dur: 0.06, vol: 0.06 }),
     reelStop: () => { tone({ f: 140, f2: 70, type: "sine", dur: 0.14, vol: 0.45 }); hiss({ f: 900, q: 2, dur: 0.06, vol: 0.25 }); },
     win: () => [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
       tone({ f, t: i * 0.085, type: "triangle", dur: 0.32, vol: 0.18 });

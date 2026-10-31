@@ -28,12 +28,12 @@
     if (step < SLIDES) {
       return `<div class="screen welcome story" id="screen">
         <div class="ob-top">${dots}<button class="link" data-a="obSkip">Skip</button></div>
-        <div class="ob-stage" id="ob-stage" style="--i:${step}">${STORY.map((s, i) => `
-          <section class="ob-slide ${i === step ? "active" : ""}" aria-hidden="${i !== step}">
+        <div class="ob-stage" id="ob-stage">${STORY.map((s, i) => `
+          <section class="ob-slide ${i === step ? "active" : ""}" data-k="${i}" aria-hidden="${i !== step}">
             <div class="ob-art">${s.art()}</div>
             <p class="eyebrow">${s.kicker}</p><h1 class="ob-title">${s.title}</h1><p class="muted ob-body">${s.body}</p>
           </section>`).join("")}</div>
-        <button class="btn primary big" data-a="obNext">${step === SLIDES - 1 ? "Get started" : "Continue"}</button>
+        <button class="btn primary big ob-next" data-a="obNext"><span>${step === SLIDES - 1 ? "Get started" : "Continue"}</span></button>
       </div>`;
     }
     if (step === SLIDES) {
@@ -84,30 +84,88 @@
     const from = ui.welcomeStep;
     ui.welcomeStep = Math.max(0, Math.min(SLIDES + 1, n));
     App.SFX.play("tap"); App.haptic("tap");
-    if (from < SLIDES && ui.welcomeStep < SLIDES) {
-      // Stay on the same DOM and slide the stage, so the change animates.
-      const stage = document.getElementById("ob-stage");
-      if (stage) {
-        stage.style.setProperty("--i", ui.welcomeStep);
-        stage.querySelectorAll(".ob-slide").forEach((s, i) => { s.classList.toggle("active", i === ui.welcomeStep); s.setAttribute("aria-hidden", String(i !== ui.welcomeStep)); });
-        document.querySelectorAll(".ob-dots i").forEach((d, i) => { d.className = i === ui.welcomeStep ? "on" : i < ui.welcomeStep ? "done" : ""; });
-        const b = document.querySelector('[data-a="obNext"]'); if (b) b.textContent = ui.welcomeStep === SLIDES - 1 ? "Get started" : "Continue";
-        return;
+    if (from < SLIDES && ui.welcomeStep < SLIDES && stageCtl) {
+      // Stay on the same DOM and glide the stage, so the change animates.
+      stageCtl.go(ui.welcomeStep);
+      document.querySelectorAll(".ob-dots i").forEach((d, i) => { d.className = i === ui.welcomeStep ? "on" : i < ui.welcomeStep ? "done" : ""; });
+      const b = document.querySelector('[data-a="obNext"]');
+      if (b) {
+        const label = ui.welcomeStep === SLIDES - 1 ? "Get started" : "Continue";
+        if (b.textContent !== label) { b.innerHTML = `<span class="swap">${label}</span>`; }
       }
+      return;
     }
     App.render();
+    const scr = document.getElementById("screen");
+    if (scr && ui.welcomeStep >= SLIDES) { scr.classList.remove("enter"); void scr.offsetWidth; scr.classList.add("ob-enter"); }
   }
   App.welcomeBack = () => { if (ui.welcomeStep === 0) return false; if (ui.welcomeStep === SLIDES + 1 && App.ACC.signedIn) return true; goStep(ui.welcomeStep - 1); return true; };
 
+  /**
+   * The story stage. `pos` is a fractional slide index: the strip follows the finger, each slide's
+   * art drifts slower than its text (parallax) and shrinks as it leaves, and a release springs to
+   * the nearest slide (or the next one on a flick).
+   */
+  let stageCtl = null;
+  const SWIPE_FLICK = 0.35; // px per ms
   function attachSwipe() {
-    const stage = document.getElementById("ob-stage"); if (!stage) return;
-    let x0 = null;
-    stage.addEventListener("pointerdown", e => { x0 = e.clientX; });
-    stage.addEventListener("pointerup", e => {
-      if (x0 == null) return;
-      const dx = e.clientX - x0; x0 = null;
-      if (Math.abs(dx) > 50) goStep(ui.welcomeStep + (dx < 0 ? 1 : -1));
+    const stage = document.getElementById("ob-stage"); if (!stage) { stageCtl = null; return; }
+    const slides = [...stage.querySelectorAll(".ob-slide")];
+    const still = App.FX.reduced();
+    let pos = ui.welcomeStep, raf = 0, drag = null;
+    function paint() {
+      stage.style.transform = `translate3d(${(-pos * 100).toFixed(3)}%, 0, 0)`;
+      slides.forEach(sl => {
+        const d = Number(sl.dataset.k) - pos, a = Math.min(1, Math.abs(d));
+        sl.style.setProperty("--d", d.toFixed(3));
+        sl.style.setProperty("--a", a.toFixed(3));
+      });
+    }
+    function settle(target) {
+      cancelAnimationFrame(raf);
+      slides.forEach((sl, i) => { sl.classList.toggle("active", i === target); sl.setAttribute("aria-hidden", String(i !== target)); });
+      if (still) { pos = target; paint(); return; }
+      // Critically damped spring (stiffness 170, damping 26), stepped with the real frame time.
+      const K = 170, C = 26;
+      let v = 0, last = performance.now();
+      const step = now => {
+        const dt = Math.min(1 / 30, (now - last) / 1000); last = now;
+        v += (K * (target - pos) - C * v) * dt;
+        pos += v * dt;
+        if (Math.abs(target - pos) < 0.001 && Math.abs(v) < 0.01) { pos = target; paint(); return; }
+        paint(); raf = requestAnimationFrame(step);
+      };
+      raf = requestAnimationFrame(step);
+    }
+    stage.addEventListener("pointerdown", e => {
+      if (drag) return;
+      cancelAnimationFrame(raf);
+      drag = { id: e.pointerId, x0: e.clientX, y0: e.clientY, p0: pos, t0: performance.now(), lastX: e.clientX, lastT: performance.now(), v: 0, live: false };
     });
+    stage.addEventListener("pointermove", e => {
+      if (!drag || e.pointerId !== drag.id) return;
+      const dx = e.clientX - drag.x0, dy = e.clientY - drag.y0;
+      if (!drag.live) { if (Math.abs(dx) < 8 || Math.abs(dy) > Math.abs(dx)) return; drag.live = true; stage.setPointerCapture && stage.setPointerCapture(e.pointerId); }
+      const now = performance.now();
+      drag.v = (e.clientX - drag.lastX) / Math.max(1, now - drag.lastT); drag.lastX = e.clientX; drag.lastT = now;
+      let p = drag.p0 - dx / stage.clientWidth;
+      if (p < 0) p = p * 0.3; // rubber band at the ends
+      if (p > SLIDES - 1) p = SLIDES - 1 + (p - (SLIDES - 1)) * 0.3;
+      pos = p; paint();
+    });
+    const end = e => {
+      if (!drag || e.pointerId !== drag.id) return;
+      const d = drag; drag = null;
+      if (!d.live) return;
+      let target = Math.round(pos);
+      if (Math.abs(d.v) > SWIPE_FLICK) target = d.v < 0 ? Math.ceil(d.p0 + 0.01) : Math.floor(d.p0 - 0.01);
+      target = Math.max(0, Math.min(SLIDES - 1, target));
+      if (target !== ui.welcomeStep) goStep(target); else settle(target);
+    };
+    stage.addEventListener("pointerup", end);
+    stage.addEventListener("pointercancel", end);
+    paint();
+    stageCtl = { go: settle };
   }
 
   /* Sign-in pill that grows into the sign-in card (after Skiper UI's sign-in), and back. */

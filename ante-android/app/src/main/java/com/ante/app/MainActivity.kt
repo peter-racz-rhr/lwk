@@ -15,6 +15,12 @@ class MainActivity : Activity() {
         web = WebHost.attach(this, mode = "main")
     }
 
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        // Dialogs, the keyboard and the Google sheet can bring the bars back; hide them again.
+        if (hasFocus) WebHost.immersive(this)
+    }
+
     override fun onResume() {
         super.onResume()
         // Coming back from Settings or from a limited app: show fresh numbers and permission state.

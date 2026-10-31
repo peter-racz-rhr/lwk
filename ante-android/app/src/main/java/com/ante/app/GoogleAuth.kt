@@ -38,10 +38,20 @@ object GoogleAuth {
         return id.takeIf { it.endsWith(".apps.googleusercontent.com") && !it.startsWith("REPLACE") }
     }
 
+    /** Developer builds say exactly what is missing; a release build keeps it short. */
+    private fun notConfiguredMessage(c: Context): String {
+        val debuggable = (c.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
+        return if (debuggable) {
+            "Google sign-in needs your Web client ID. Paste it into res/values/google.xml, then run the app again."
+        } else {
+            "Google sign-in isn't set up in this build yet."
+        }
+    }
+
     /** Runs the sign-in sheet; [done] gets {ok, name, email} or {ok:false, error, message}. Main thread. */
     fun signIn(activity: Activity, done: (JSONObject) -> Unit) {
         val clientId = webClientId(activity)
-            ?: return done(fail("not_configured", "Google sign-in isn't set up in this build yet."))
+            ?: return done(fail("not_configured", notConfiguredMessage(activity)))
         val option = GetSignInWithGoogleOption.Builder(clientId).setNonce(nonce()).build()
         val request = GetCredentialRequest.Builder().addCredentialOption(option).build()
         val callback = object : CredentialManagerCallback<GetCredentialResponse, GetCredentialException> {

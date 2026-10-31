@@ -36,6 +36,37 @@ test("roulette expected return is 36/37 for every bet", () => {
   }
 });
 
+test("roulette bet ids: outside bets and single numbers 0-36, nothing else", () => {
+  assert.ok(G.isRouletteBet("red"));
+  assert.ok(G.isRouletteBet("n:0"));
+  assert.ok(G.isRouletteBet("n:36"));
+  for (const bad of ["n:37", "n:-1", "n:1.5", "n:", "num", "toString", "__proto__", "", null, 7]) assert.ok(!G.isRouletteBet(bad), String(bad));
+});
+
+test("several roulette bets pay the sum of each winning bet", () => {
+  // 17 is black, odd, low, 2nd dozen.
+  assert.equal(G.rouletteReturn(["black", "odd", "n:17"], 17), 2 + 2 + 36);
+  assert.equal(G.rouletteReturn(["red", "even", "n:4"], 17), 0);
+  assert.equal(G.rouletteReturn(["red", "black"], 0), 0);
+  assert.equal(G.rouletteReturn(["d2", "high"], 17), 3);
+});
+
+test("roulette ignores unknown and repeated bets", () => {
+  assert.equal(G.rouletteReturn(["black", "black", "bogus", "n:99"], 17), 2);
+});
+
+test("any mix of roulette bets still returns 36/37", () => {
+  const rng = seeded(7);
+  const pool = [...Object.keys(G.ROULETTE_BETS), ...Array.from({ length: 37 }, (_, n) => "n:" + n)];
+  for (let k = 0; k < 50; k++) {
+    const bets = [...new Set(pool.filter(() => rng() < 0.15))];
+    if (!bets.length) continue;
+    let sum = 0;
+    for (let n = 0; n <= 36; n++) sum += G.rouletteReturn(bets, n);
+    assert.ok(Math.abs(sum / 37 / bets.length - 36 / 37) < 1e-9, bets.join(","));
+  }
+});
+
 test("slots return is 93%", () => {
   assert.ok(Math.abs(G.slotReturn() - 0.9298) < 0.001, String(G.slotReturn()));
 });

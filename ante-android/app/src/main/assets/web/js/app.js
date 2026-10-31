@@ -102,30 +102,78 @@
   /* ---------- navigation: three tabs, with an indicator that glides to the active one ---------- */
   const TABS = [["home", "Home", "home"], ["tables", "Play", "play"], ["profile", "Profile", "user"]];
   const TAB_OF = { home: "home", screentime: "home", results: "home", tables: "tables", game: "tables", profile: "profile", legal: "profile" };
-  let indX = null, tipUntil = 0;
+  let indX = null;
   function navbar() {
     if (App.BLOCK || ui.view === "welcome" || (ui.view === "legal" && ui.back === "welcome")) return "";
     const S = App.S, cur = TAB_OF[ui.view] || "home";
     const care = !S.accessibility || !S.watching || S.batteryOk === false;
     const lock = ui.busy || ui.round ? "disabled" : "";
-    return `<nav class="navpill" aria-label="Sections"><span class="nav-ind" aria-hidden="true"></span><span class="navtip" aria-hidden="true"></span>${TABS.map(([t, l, ic]) =>
+    return `<nav class="navpill" aria-label="Sections"><span class="nav-ind" aria-hidden="true"></span>${TABS.map(([t, l, ic]) =>
       `<button data-a="tab" data-t="${t}" aria-label="${l}" aria-current="${cur === t ? "page" : "false"}" ${lock}>${App.ICON[ic]}${t === "profile" && care ? '<i class="ndot"></i>' : ""}</button>`).join("")}</nav>`;
   }
-  function placeNav(hover) {
+  function placeNav() {
     const nav = App.$app.querySelector(".navpill"); if (!nav) return;
-    const active = nav.querySelector('[aria-current="page"]'), ind = nav.querySelector(".nav-ind"), tip = nav.querySelector(".navtip");
+    const active = nav.querySelector('[aria-current="page"]'), ind = nav.querySelector(".nav-ind");
     if (active && ind) {
       const x = active.offsetLeft;
       if (indX != null && indX !== x) { ind.style.transition = "none"; ind.style.transform = `translateX(${indX}px)`; void ind.offsetWidth; ind.style.transition = ""; }
       ind.style.transform = `translateX(${x}px)`; ind.style.width = active.offsetWidth + "px"; indX = x;
     }
-    const t = hover || active;
-    if (t && tip) {
-      tip.textContent = t.getAttribute("aria-label");
-      tip.style.left = (t.offsetLeft + t.offsetWidth / 2) + "px";
-      tip.classList.toggle("show", !!hover || Date.now() < tipUntil);
+  }
+
+  /* Drag a finger along the bar: the indicator follows it, lights the tab under it, and
+     letting go opens that tab. A plain tap still goes through the click handler. */
+  const DRAG_SLOP = 6, EAT_CLICK_MS = 400;
+  let drag = null, eatClick = false;
+  function tabAt(nav, clientX) {
+    const btns = [...nav.querySelectorAll("button")];
+    return btns.reduce((best, b) => {
+      const r = b.getBoundingClientRect(), d = Math.abs(clientX - (r.left + r.width / 2));
+      return !best || d < best.d ? { b, d } : best;
+    }, null).b;
+  }
+  function dragMove(e) {
+    if (!drag || e.pointerId !== drag.id) return;
+    const { nav, ind } = drag, dx = e.clientX - drag.x0;
+    if (!drag.moved && Math.abs(dx) < DRAG_SLOP) return;
+    if (!drag.moved) { drag.moved = true; nav.classList.add("dragging"); }
+    const r = nav.getBoundingClientRect(), w = ind.offsetWidth, pad = 6;
+    const x = Math.max(pad, Math.min(r.width - pad - w, e.clientX - r.left - w / 2));
+    ind.style.transform = `translateX(${x}px) scaleX(1.06)`;
+    const hot = tabAt(nav, e.clientX);
+    if (hot !== drag.hot) {
+      nav.querySelectorAll("button").forEach(b => b.classList.toggle("hot", b === hot));
+      if (drag.hot) App.haptic("tick");
+      drag.hot = hot;
     }
   }
+  function dragEnd(e) {
+    if (!drag || e.pointerId !== drag.id) return;
+    const d = drag; drag = null;
+    window.removeEventListener("pointermove", dragMove);
+    window.removeEventListener("pointerup", dragEnd);
+    window.removeEventListener("pointercancel", dragEnd);
+    if (!d.moved) return;
+    // Touch can deliver the tap's click a moment after pointerup; keep eating it for a beat.
+    eatClick = true; setTimeout(() => { eatClick = false; }, EAT_CLICK_MS);
+    if (!d.nav.isConnected) { placeNav(); return; } // the bar was re-rendered mid-drag
+    d.nav.classList.remove("dragging");
+    d.nav.querySelectorAll("button").forEach(b => b.classList.remove("hot"));
+    const target = e.type === "pointercancel" ? null : tabAt(d.nav, e.clientX);
+    if (target && target.getAttribute("aria-current") !== "page") { indX = parseFloat((d.ind.style.transform.match(/translateX\(([-\d.]+)px/) || [])[1]); App.act.tab(target.dataset); }
+    else placeNav();
+  }
+  App.$app.addEventListener("pointerdown", e => {
+    const nav = e.target.closest(".navpill");
+    eatClick = false; // a new touch is never the tail of the last drag
+    if (!nav || drag || ui.busy || ui.round || (e.pointerType === "mouse" && e.button !== 0)) return;
+    drag = { id: e.pointerId, x0: e.clientX, nav, ind: nav.querySelector(".nav-ind"), moved: false, hot: null };
+    window.addEventListener("pointermove", dragMove);
+    window.addEventListener("pointerup", dragEnd);
+    window.addEventListener("pointercancel", dragEnd);
+  });
+  // A drag ends with a click on whatever is under the finger; swallow it.
+  App.$app.addEventListener("click", e => { if (eatClick) { e.stopPropagation(); e.preventDefault(); eatClick = false; } }, true);
   App.renderNav = function () {
     const nav = App.$app.querySelector(".navpill"); if (!nav) return;
     const tmp = document.createElement("div"); tmp.innerHTML = navbar();
@@ -160,10 +208,8 @@
   Object.assign(App.act, {
     tab(d) {
       if (ui.busy || ui.round) return;
-      tipUntil = Date.now() + 1100;
       ui.view = d.t; ui.game = null; App.haptic("tap");
       App.render();
-      setTimeout(() => placeNav(), 1150);
     },
     add() {
       ui.sheet = { type: "pick", apps: null, q: "" }; App.paintOverlay();
@@ -201,8 +247,6 @@
   App.$app.addEventListener("keydown", e => { // role="button" cards
     if ((e.key === "Enter" || e.key === " ") && e.target.matches('[role="button"][data-a]')) { e.preventDefault(); onClick(e); }
   });
-  App.$app.addEventListener("pointerover", e => { const b = e.target.closest(".navpill button"); if (b && e.pointerType === "mouse") placeNav(b); });
-  App.$app.addEventListener("pointerout", e => { const b = e.target.closest(".navpill button"); if (b && e.pointerType === "mouse") placeNav(); });
   App.$app.addEventListener("input", e => { if (e.target.id === "stake-slider") App.onStakeSlider(e.target); });
   App.$overlay.addEventListener("input", e => { if (e.target.id === "app-search" && ui.sheet) { ui.sheet.q = e.target.value; App.paintOverlay(); } });
   document.addEventListener("keydown", e => { if (e.key === "Escape") window.anteBack(); });
