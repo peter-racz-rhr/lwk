@@ -362,6 +362,10 @@
     const t = game.target;
     let barIndex = 0;
     const vis = visibleNotes(), shared = sharedNotes();
+    const last = byId(game.guesses[game.guesses.length - 1]);
+    const before = new Set();
+    game.guesses.slice(0, -1).forEach((id) => { const g = byId(id); if (g) noteSet(g).forEach((n) => before.add(n)); });
+    const newlyShared = new Set(last ? [...noteSet(last)].filter((n) => shared.has(n) && !before.has(n)) : []);
     const tier = (name, notes, key) => {
       if (!notes.length) return "";
       const n = notes.length;
@@ -369,15 +373,20 @@
         const c = canon(note), col = noteColour(note);
         const w = n === 1 ? 100 : 100 - (i * 40) / (n - 1);
         const hidden = !vis.has(c);
-        const label = hidden ? '<span class="blurtext" aria-hidden="true">' + fake(t.id + key + i, 4, 11) + '</span><span class="sr">hidden note</span>' : esc(note);
-        const cls = "bar" + (hidden ? " bar--hidden" : "") + (!hidden && shared.has(c) && !game.over ? " bar--shared" : "");
+        const isShared = !hidden && shared.has(c) && !game.over;
+        const label = hidden ? '<span class="blurtext" aria-hidden="true">' + fake(t.id + key + i, 4, 11) + '</span><span class="sr">hidden note</span>'
+          : esc(note) + (isShared ? '<span class="sr"> (also in one of your guesses)</span>' : "");
+        const cls = "bar" + (hidden ? " bar--hidden" : "") + (isShared ? " bar--shared" + (newlyShared.has(c) ? " bar--new" : "") : "");
         return '<li class="' + cls + '" style="--n:' + (barIndex++) + ";--w:" + w.toFixed(1) + "%;--c:" + col + ";--t:" + ink(col) + '">' + label + "</li>";
       }).join("") + "</ul></section>";
     };
     const flat = !t.top.length && !t.base.length;
     $("#notes").innerHTML = flat ? tier("Notes", t.heart, "h") : tier("Top notes", t.top, "t") + tier("Heart notes", t.heart, "h") + tier("Base notes", t.base, "b");
     const hidden = noteSet(t).size - vis.size;
-    $("#notes-count").textContent = hidden > 0 ? hidden + " of " + noteSet(t).size + " notes hidden" : "";
+    const parts = [];
+    if (hidden > 0) parts.push(esc(hidden + " of " + noteSet(t).size + " notes hidden"));
+    if (shared.size && !game.over && [...vis].some((n) => shared.has(n))) parts.push('<span class="legend-shared"><i aria-hidden="true">✓</i>in one of your guesses</span>');
+    $("#notes-count").innerHTML = parts.join(" · ");
     const facts = [];
     if (MODES[game.mode].showGender || game.over) facts.push(t.gender);
     if (MODES[game.mode].accordLabels || game.over || game.hints.includes("accords")) facts.push(t.accords.slice(0, 3).join(", "));
