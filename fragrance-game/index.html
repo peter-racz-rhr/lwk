@@ -5,73 +5,85 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Blind Spritz</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="description" content="Guess the fragrance from its note pyramid. Daily and unlimited rounds in easy, medium and hard.">
+<meta name="description" content="Guess the fragrance from its notes. The bottle stays blurred until the round ends.">
+<meta property="og:title" content="Blind Spritz">
+<meta property="og:description" content="Guess the fragrance from its notes. The bottle stays blurred until the round ends.">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#f6f5f2">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='11' y='3' width='10' height='6' rx='1' fill='%23151515'/%3E%3Crect x='6' y='10' width='20' height='19' rx='4' fill='%23151515'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,600;1,6..96,500;1,6..96,600&family=IBM+Plex+Mono:wght@400;500;600&family=Schibsted+Grotesk:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-<div class="wrap">
-  <header class="mast">
-    <div>
-      <h1>Blind <span>Spritz</span></h1>
-      <p>A mystery bottle is on the strip. Read the notes, guess the fragrance, and use each comparison to close in on the house, the year and the juice.</p>
-    </div>
-    <span class="round" id="round-label"></span>
+<div class="page">
+  <header class="top">
+    <h1>Blind Spritz</h1>
+    <span class="top__round" id="round"></span>
   </header>
 
-  <nav class="controls" aria-label="Game settings">
+  <nav class="settings" aria-label="Game settings">
     <div class="seg" role="group" aria-label="Difficulty">
       <button type="button" data-mode="easy" id="mode-easy">Easy</button>
       <button type="button" data-mode="medium" id="mode-medium">Medium</button>
       <button type="button" data-mode="hard" id="mode-hard">Hard</button>
     </div>
-    <div class="seg" role="group" aria-label="Round type">
+    <div class="seg" role="group" aria-label="Bottles for">
+      <button type="button" data-gender="all" id="g-all">All</button>
+      <button type="button" data-gender="Masculine" id="g-men">Men</button>
+      <button type="button" data-gender="Feminine" id="g-women">Women</button>
+      <button type="button" data-gender="Unisex" id="g-unisex">Unisex</button>
+    </div>
+    <div class="seg" role="group" aria-label="Round">
       <button type="button" data-play="daily" id="play-daily">Daily</button>
       <button type="button" data-play="unlimited" id="play-unlimited">Unlimited</button>
     </div>
-    <p class="mode-blurb" id="mode-blurb"></p>
   </nav>
+  <p class="blurb" id="mode-blurb"></p>
 
-  <main class="board">
-    <section class="strip" aria-labelledby="strip-title">
-      <div class="strip__label"><h2 id="strip-title">The strip</h2><span>Mystery bottle</span></div>
-      <div class="strip__body" id="strip-body"></div>
+  <main>
+    <section class="stage" id="stage" aria-label="Hidden fragrance">
+      <figure class="bottle" id="bottle">
+        <div class="bottle__frame">
+          <img id="bottle-img" alt="" width="375" height="500" decoding="async" referrerpolicy="no-referrer">
+          <span class="bottle__q" aria-hidden="true">?</span>
+        </div>
+        <figcaption>
+          <span class="bottle__name" id="reveal-name"></span>
+          <span class="bottle__brand" id="reveal-brand"></span>
+        </figcaption>
+      </figure>
+      <p class="facts" id="facts" hidden></p>
+      <div id="notes"></div>
+      <p class="notes-count" id="notes-count"></p>
     </section>
 
-    <section class="ledger" aria-label="Guesses">
-      <div class="ask">
-        <form class="ask__row" id="guess-form" autocomplete="off">
-          <div class="combo">
-            <input id="guess-input" type="text" placeholder="Type a fragrance or brand…" aria-label="Guess a fragrance" role="combobox"
-                   aria-autocomplete="list" aria-expanded="false" aria-controls="guess-list" spellcheck="false">
-            <ul class="listbox" id="guess-list" role="listbox" hidden></ul>
-          </div>
-          <button type="button" class="btn btn--ghost" id="give-up">Give up</button>
-        </form>
-        <div class="result" id="result" hidden aria-live="polite"></div>
-      </div>
+    <section class="play" aria-label="Your guesses">
+      <form class="ask" id="guess-form" autocomplete="off">
+        <div class="combo">
+          <input id="guess-input" type="text" placeholder="Search by name or brand" aria-label="Guess a fragrance" role="combobox"
+                 aria-autocomplete="list" aria-expanded="false" aria-controls="guess-list" spellcheck="false">
+          <ul class="listbox" id="guess-list" role="listbox" hidden></ul>
+        </div>
+        <button type="button" class="btn btn--plain" id="give-up">Give up</button>
+      </form>
+      <div class="result" id="result" hidden aria-live="polite"></div>
 
-      <div class="hints">
-        <div class="hints__head"><h3>Hints</h3><span id="hints-left"></span></div>
+      <div class="hints" id="hints">
+        <div class="row-head"><h2>Hints</h2><span id="hints-left"></span></div>
         <ul class="hints-used" id="hints-used"></ul>
-        <div class="hint-buttons" id="hint-buttons"></div>
+        <div class="chips" id="hint-buttons"></div>
       </div>
 
-      <div class="ledger__head"><h3>Guesses</h3><span id="guess-count"></span></div>
-      <ul class="legend">
-        <li><i style="background:var(--hit)"></i>match</li>
-        <li><i style="background:var(--near)"></i>close</li>
-        <li><i style="background:var(--miss)"></i>no match</li>
-        <li>↑ ↓ the answer is higher or lower</li>
-      </ul>
+      <div class="row-head"><h2>Guesses</h2><span id="guess-count"></span></div>
+      <p class="empty" id="guess-empty">Each guess is compared with the hidden bottle. Green is a match, yellow is close, and arrows point toward the answer.</p>
       <ol class="guesses" id="guesses"></ol>
     </section>
   </main>
 
   <footer class="foot">
-    <p><span id="cellar-size"></span> bottles in the cellar. Note pyramids follow Fragrantica's top, heart and base layout; lasting, sillage and hype are rounded from Fragrantica community votes. Strength runs Cologne → Eau de Toilette → Eau de Parfum → Parfum → Extrait. Not affiliated with Fragrantica or any fragrance house.</p>
+    <p><span id="count"></span> fragrances. Notes and bottle images come from Fragrantica. Lasting, sillage and hype are rounded from its community votes. This is a fan project with no link to Fragrantica or any perfume house.</p>
   </footer>
 </div>
 <script src="js/data.js"></script>

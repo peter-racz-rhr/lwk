@@ -1,6 +1,6 @@
 # Blind Spritz
 
-A guessing game for fragrance people, in the style of the football-player guessing games. A mystery bottle's note pyramid sits on a smelling strip. You guess a fragrance, and each guess is compared with the answer on ten traits:
+A guessing game for fragrance people, in the style of the football-player guessing games. You see the hidden fragrance's note pyramid and a blurred photo of its bottle. You guess a fragrance, and each guess is compared with the answer on ten traits. When the round ends, the bottle comes into focus.
 
 | Trait | Green | Gold | Arrow |
 |---|---|---|---|
@@ -21,7 +21,9 @@ A guessing game for fragrance people, in the style of the football-player guessi
 - **Medium**: the 98 popular bottles. Full pyramid only. 8 guesses, 3 hints.
 - **Hard**: all 100. Two notes to start; every miss uncovers another note, and notes your guesses share with the answer are uncovered too. 6 guesses, 2 hints.
 
-Each mode has a **Daily** round (same bottle for everyone that day) and **Unlimited** practice. Hints you can spend: house type, gender, release decade, olfactive family, country, brand initial, and (hard) reveal a note. Stats, streaks and the share grid are saved in the browser.
+Filter by **All / Men / Women / Unisex** to play only one kind of bottle. Each mode has a **Daily** round (same bottle for everyone that day) and **Unlimited** practice. Hints you can spend: house type, gender, release decade, olfactive family, country, brand initial, and (hard) reveal a note. Stats, streaks and the share grid are saved in the browser.
+
+The bottle blur is strongest on hard (34px), medium 24px, easy 16px.
 
 ## Run it
 
@@ -33,7 +35,7 @@ npx serve .
 
 ## Data and Fragrantica
 
-`js/data.js` holds 100 bottles with Fragrantica-style top/heart/base pyramids. Lasting, sillage and hype are rounded approximations of Fragrantica community votes, so spot-check any you care about.
+`js/data.js` holds 100 bottles with Fragrantica-style top/heart/base pyramids. Each bottle has its Fragrantica image id; the game loads the photo from Fragrantica's image host (`fimgs.net/mdimg/perfume/375x500.<id>.jpg`), and every id was checked by eye against the right bottle. Lasting, sillage and hype are rounded approximations of Fragrantica community votes, so spot-check any you care about.
 
 Fragrantica has no public API and sits behind Cloudflare, so the game doesn't call it live. To add or refresh bottles from it, run the fetch script on your own machine:
 

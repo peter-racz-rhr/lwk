@@ -6,7 +6,7 @@
  * Fragrantica community votes, rounded to the nearest step.
  *
  * To refresh or extend this list from Fragrantica, run
- *   node scripts/fetch-fragrantica.mjs urls.txt > js/data.fetched.json
+ *   node scripts/fetch-fragrantica.mjs urls.txt
  * on your own machine (see README.md).
  *
  * Row format:
@@ -117,7 +117,7 @@
   F("Replica By the Fireplace", "Maison Margiela", "D", "France", "U", 2015, "EDT", "Woody", "Woody, Smoky, Vanilla, Warm Spicy, Sweet",
     "pink pepper, orange blossom, clove", "chestnut, guaiac wood, juniper", "vanilla, peru balsam, cashmeran", 4, 3, 5);
   F("Replica Lazy Sunday Morning", "Maison Margiela", "D", "France", "U", 2013, "EDT", "Musk", "Musk, Floral, Powdery, Fresh, Fruity",
-    "aldehydes, pear, lily-of-the-valley", "iris, rose", "white musk, ambrette, patchouli", 2, 2, 4);
+    "aldehydes, pear, lily-of-the-valley", "rose, iris, orange blossom", "white musk, ambrette, patchouli", 2, 2, 4);
 
   // ---------- Designer · feminine ----------
   F("N°5", "Chanel", "D", "France", "F", 1921, "EDP", "Floral", "Floral, Aldehydic, Powdery, Musk, Woody",
@@ -142,14 +142,14 @@
   F("Lady Million", "Paco Rabanne", "D", "Spain", "F", 2010, "EDP", "Floral", "Floral, Honey, Fruity, White Floral, Sweet",
     "neroli, raspberry, lemon", "gardenia, orange blossom, jasmine", "honey, patchouli, amber", 4, 4, 4);
   F("Flowerbomb", "Viktor & Rolf", "D", "Netherlands", "F", 2005, "EDP", "Floral", "Floral, Sweet, Patchouli, Musk, Powdery",
-    "tea, bergamot, osmanthus", "jasmine sambac, freesia, orchid, rose", "patchouli, musk", 4, 3, 5);
+    "tea, bergamot, osmanthus", "orchid, jasmine, rose, freesia, orange blossom", "patchouli, musk, vanilla", 4, 3, 5);
   F("Angel", "Mugler", "D", "France", "F", 1992, "EDP", "Gourmand", "Gourmand, Patchouli, Sweet, Caramel, Fruity",
     "cotton candy, coconut, cassia, melon, bergamot, mandarin", "honey, apricot, blackberry, plum, red berries, jasmine, rose",
     "patchouli, chocolate, caramel, vanilla, tonka bean, amber, musk", 5, 4, 4);
   F("Alien", "Mugler", "D", "France", "F", 2005, "EDP", "Floral", "Floral, White Floral, Woody, Amber, Animalic",
     "jasmine sambac", "cashmere wood", "amber", 5, 4, 5);
   F("Bloom", "Gucci", "D", "Italy", "F", 2017, "EDP", "Floral", "Floral, White Floral, Tuberose, Green, Powdery",
-    "", "jasmine, tuberose, rangoon creeper", "", 3, 3, 4);
+    "jasmine", "tuberose", "rangoon creeper", 3, 3, 4);
   F("Good Girl", "Carolina Herrera", "D", "USA", "F", 2016, "EDP", "Gourmand", "Gourmand, Amber, White Floral, Cacao, Sweet",
     "almond, coffee, bergamot, lemon", "tuberose, jasmine sambac, orange blossom, orris root, rose",
     "tonka bean, cacao, vanilla, praline, sandalwood, musk, amber, cinnamon, patchouli, cedar", 4, 3, 5);
@@ -158,7 +158,7 @@
   F("Light Blue", "Dolce & Gabbana", "D", "Italy", "F", 2001, "EDT", "Citrus", "Citrus, Fruity, Fresh, Floral, Woody",
     "lemon, apple, cedar, bellflower", "bamboo, jasmine, white rose", "cedar, musk, amber", 2, 2, 5);
   F("Daisy", "Marc Jacobs", "D", "USA", "F", 2007, "EDT", "Floral", "Floral, Fruity, Violet, Fresh, Musk",
-    "violet leaf, wild berries, grapefruit", "gardenia, violet, jasmine", "musk, vanilla, white woods", 2, 2, 5);
+    "violet leaf, grapefruit, strawberry", "violet, gardenia, jasmine", "musk, white woods, vanilla", 2, 2, 5);
   F("Chloé", "Chloé", "D", "France", "F", 2008, "EDP", "Floral", "Floral, Rose, Powdery, Fresh, Fruity",
     "peony, litchi, freesia", "rose, lily-of-the-valley, magnolia", "cedar, amber", 3, 2, 4);
   F("Donna Born in Roma", "Valentino", "D", "Italy", "F", 2019, "EDP", "Amber", "Amber, Vanilla, White Floral, Fruity, Woody",
@@ -194,7 +194,7 @@
   F("Mojave Ghost", "Byredo", "N", "Sweden", "U", 2014, "EDP", "Woody", "Woody, Musk, Floral, Fruity, Powdery",
     "ambrette, sapodilla", "magnolia, violet, sandalwood", "musk, cedar, ambergris", 3, 2, 4);
   F("Bal d'Afrique", "Byredo", "N", "Sweden", "U", 2009, "EDP", "Woody", "Woody, Citrus, Floral, Musk, Green",
-    "marigold, bergamot, lemon, neroli, buchu", "violet, jasmine, cyclamen", "vetiver, amber, cedar, musk", 3, 2, 4);
+    "bergamot, marigold, buchu", "violet, cyclamen", "vetiver, cedar", 3, 2, 4);
   F("Oud for Greatness", "Initio", "N", "France", "U", 2018, "EDP", "Oud", "Oud, Warm Spicy, Woody, Lavender, Saffron",
     "saffron, nutmeg, lavender", "oud", "patchouli, musk", 5, 4, 4);
   F("Layton", "Parfums de Marly", "N", "France", "M", 2016, "EDP", "Amber", "Amber, Fruity, Vanilla, Lavender, Warm Spicy",
@@ -218,7 +218,7 @@
   F("Reflection Man", "Amouage", "N", "Oman", "M", 2007, "EDP", "Floral", "Floral, Powdery, Woody, Fresh Spicy, White Floral",
     "rosemary, pepper, petitgrain", "jasmine, neroli, orris root, ylang-ylang", "sandalwood, cedar, vetiver, patchouli", 4, 3, 4);
   F("Philosykos", "Diptyque", "N", "France", "U", 1996, "EDT", "Green", "Green, Fig, Woody, Milky, Fresh",
-    "fig leaf, fig", "green notes, coconut", "fig tree, cedar", 3, 2, 4);
+    "fig", "fig leaf", "fig tree", 3, 2, 4);
   F("Hacivat", "Nishane", "N", "Turkey", "U", 2017, "Extrait", "Chypre", "Chypre, Fruity, Woody, Citrus, Mossy",
     "pineapple, grapefruit, bergamot", "patchouli, cedar, jasmine", "oakmoss, woody notes", 5, 4, 4);
   F("Portrait of a Lady", "Frédéric Malle", "N", "France", "F", 2010, "EDP", "Amber", "Amber, Rose, Patchouli, Warm Spicy, Incense",
@@ -231,13 +231,13 @@
     "lemon, black currant, spicy notes, bergamot", "fruity notes, water jasmine, patchouli",
     "leather, sandalwood, oakmoss, white musk, vanilla, cedar", 5, 4, 4);
   F("Intense Cafe", "Montale", "N", "France", "U", 2013, "EDP", "Gourmand", "Gourmand, Coffee, Rose, Vanilla, Amber",
-    "rose", "coffee, floral notes", "vanilla, amber, white musk", 5, 4, 4);
+    "floral notes", "rose, coffee", "vanilla, white musk, amber", 5, 4, 4);
   F("Wood Sage & Sea Salt", "Jo Malone", "N", "United Kingdom", "U", 2014, "EDC", "Aquatic", "Aquatic, Salty, Aromatic, Woody, Fresh",
-    "ambrette", "sea salt", "sage", 2, 2, 4);
+    "", "sea salt, sage, grapefruit, ambrette, seaweed", "", 2, 2, 4);
   F("English Pear & Freesia", "Jo Malone", "N", "United Kingdom", "F", 2010, "EDC", "Fruity", "Fruity, Floral, Fresh, Musk, Sweet",
     "pear, melon", "freesia, rose", "patchouli, rhubarb, white musk, amber", 2, 2, 4);
-  F("Vanilla 28", "Kayali", "N", "UAE", "F", 2018, "EDP", "Gourmand", "Gourmand, Vanilla, Sweet, Amber, Musk",
-    "", "vanilla orchid, brown sugar, tonka bean", "amber, musk, patchouli", 4, 3, 4);
+  F("Vanilla 28", "Kayali", "N", "UAE", "U", 2018, "EDP", "Gourmand", "Gourmand, Vanilla, Sweet, Amber, Musk",
+    "vanilla orchid, jasmine", "brown sugar, tonka bean", "amber, amberwood, musk, patchouli", 4, 3, 4);
 
   // ---------- Arabian ----------
   F("Khamrah", "Lattafa", "A", "UAE", "U", 2022, "EDP", "Gourmand", "Gourmand, Warm Spicy, Sweet, Cinnamon, Boozy",
@@ -248,7 +248,7 @@
   F("Yara", "Lattafa", "A", "UAE", "F", 2020, "EDP", "Gourmand", "Gourmand, Sweet, Vanilla, Fruity, Powdery",
     "heliotrope, orchid, tangerine", "gourmand accord, tropical fruits", "vanilla, musk, sandalwood", 4, 3, 5);
   F("Badee Al Oud Oud for Glory", "Lattafa", "A", "UAE", "U", 2020, "EDP", "Oud", "Oud, Warm Spicy, Saffron, Woody, Lavender",
-    "saffron, nutmeg, lavender", "oud, patchouli", "patchouli, musk", 5, 4, 4);
+    "saffron, nutmeg, lavender", "oud, patchouli", "musk", 5, 4, 4);
   F("Club de Nuit Intense Man", "Armaf", "A", "UAE", "M", 2015, "EDT", "Chypre", "Chypre, Fruity, Smoky, Citrus, Woody",
     "lemon, pineapple, bergamot, black currant, apple", "birch, jasmine, rose", "musk, ambergris, patchouli, vanilla", 5, 4, 5);
   F("Hawas for Him", "Rasasi", "A", "UAE", "M", 2015, "EDP", "Aquatic", "Aquatic, Fruity, Fresh, Sweet, Warm Spicy",
@@ -262,11 +262,15 @@
   F("Fantasy", "Britney Spears", "C", "USA", "F", 2005, "EDP", "Gourmand", "Gourmand, Fruity, Sweet, Chocolate, Floral",
     "kiwi, lychee, quince", "white chocolate, cupcake, jasmine, orchid", "musk, woody notes, orris root", 3, 3, 4);
   F("Eilish", "Billie Eilish", "C", "USA", "F", 2021, "EDP", "Amber", "Amber, Vanilla, Sweet, Cacao, Fruity",
-    "mandarin, red berries, sugared petals", "vanilla, cocoa, spices", "musk, tonka bean, woody notes", 4, 3, 4);
+    "sugar, red berries, mandarin", "vanilla, cacao, spicy notes, rose", "tonka bean, amber, musk, woody notes", 4, 3, 4);
   F("You", "Glossier", "I", "USA", "U", 2017, "EDP", "Musk", "Musk, Powdery, Woody, Iris, Clean",
     "pink pepper", "iris, ambrette", "ambroxan, musk", 2, 1, 3);
 
   // Bottles fetched with scripts/fetch-fragrantica.mjs override or extend the list.
+  // Fragrantica image ids (fimgs.net/mdimg/perfume/375x500.<id>.jpg), each checked by eye.
+  const IMG = {"dior-sauvage":"31861", "dior-sauvage-elixir":"68415", "dior-dior-homme-intense":"13016", "dior-fahrenheit":"228", "chanel-bleu-de-chanel":"9099", "chanel-allure-homme-sport":"607", "giorgio-armani-acqua-di-gi":"410", "giorgio-armani-acqua-di-gi-profumo":"29727", "giorgio-armani-armani-code":"412", "paco-rabanne-1-million":"3747", "jean-paul-gaultier-le-male":"430", "jean-paul-gaultier-le-male-le-parfum":"61856", "jean-paul-gaultier-ultra-male":"30947", "yves-saint-laurent-y-eau-de-parfum":"50757", "yves-saint-laurent-la-nuit-de-l-homme":"5521", "versace-eros":"16657", "versace-dylan-blue":"40031", "prada-luna-rossa-carbon":"43402", "prada-l-homme":"39029", "herm-s-terre-d-herm-s":"17", "viktor-rolf-spicebomb":"13857", "dolce-gabbana-light-blue-pour-homme":"1068", "hugo-boss-boss-bottled":"383", "davidoff-cool-water":"507", "issey-miyake-l-eau-d-issey-pour-homme":"721", "montblanc-explorer":"52002", "mugler-a-men":"705", "tom-ford-noir-extreme":"29675", "tom-ford-oud-wood":"1826", "tom-ford-tobacco-vanille":"1825", "tom-ford-lost-cherry":"51411", "tom-ford-ombr-leather":"50239", "tom-ford-tuscan-leather":"1849", "tom-ford-neroli-portofino":"12192", "maison-margiela-replica-jazz-club":"20541", "maison-margiela-replica-by-the-fireplace":"31623", "maison-margiela-replica-lazy-sunday-morning":"20542", "chanel-n-5":"40069", "chanel-coco-mademoiselle":"611", "chanel-chance-eau-tendre":"8069", "dior-j-adore":"210", "dior-miss-dior-blooming-bouquet":"23280", "yves-saint-laurent-black-opium":"25324", "yves-saint-laurent-libre":"56077", "lanc-me-la-vie-est-belle":"14982", "paco-rabanne-lady-million":"9045", "viktor-rolf-flowerbomb":"1460", "mugler-angel":"704", "mugler-alien":"707", "gucci-bloom":"44894", "carolina-herrera-good-girl":"39681", "giorgio-armani-s":"18453", "dolce-gabbana-light-blue":"485", "marc-jacobs-daisy":"1361", "chlo-chlo":"1733", "valentino-donna-born-in-roma":"55805", "givenchy-l-interdit":"51488", "guerlain-shalimar":"53", "tom-ford-black-orchid":"1018", "calvin-klein-ck-one":"276", "creed-aventus":"9828", "creed-green-irish-tweed":"474", "creed-silver-mountain-water":"472", "maison-francis-kurkdjian-baccarat-rouge-540":"33519", "maison-francis-kurkdjian-grand-soir":"40816", "le-labo-santal-33":"12201", "byredo-gypsy-water":"3575", "byredo-mojave-ghost":"27040", "byredo-bal-d-afrique":"6458", "initio-oud-for-greatness":"53641", "parfums-de-marly-layton":"39314", "parfums-de-marly-delina":"43871", "parfums-de-marly-herod":"16939", "xerjoff-naxos":"30529", "xerjoff-erba-pura":"55157", "kilian-love-don-t-be-shy":"4322", "kilian-angels-share":"62615", "amouage-interlude-man":"15294", "amouage-reflection-man":"920", "diptyque-philosykos":"72040", "nishane-hacivat":"44174", "fr-d-ric-malle-portrait-of-a-lady":"10464", "escentric-molecules-molecule-01":"845", "juliette-has-a-gun-not-a-perfume":"10296", "mancera-cedrat-bois":"15211", "montale-intense-cafe":"18021", "jo-malone-wood-sage-sea-salt":"25529", "jo-malone-english-pear-freesia":"10314", "kayali-vanilla-28":"52616", "lattafa-khamrah":"75805", "lattafa-asad":"72821", "lattafa-yara":"76880", "lattafa-badee-al-oud-oud-for-glory":"64948", "armaf-club-de-nuit-intense-man":"34696", "rasasi-hawas-for-him":"46890", "afnan-9-pm":"65414", "ariana-grande-cloud":"50384", "britney-spears-fantasy":"600", "billie-eilish-eilish":"70052", "glossier-you":"46885"};
+  rows.forEach((r) => { if (IMG[r.id]) r.img = Number(IMG[r.id]); });
+
   window.FRAGRANCES = rows;
   window.mergeExtraFragrances = function (extra) {
     (extra || []).forEach((f) => {
