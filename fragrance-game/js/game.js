@@ -295,6 +295,7 @@
   // One display: the note pyramid as Fragrantica-style bars, coloured by note family.
   function renderNotes() {
     const t = game.target;
+    let barIndex = 0;
     const vis = visibleNotes(), shared = sharedNotes();
     const tier = (name, notes, key) => {
       if (!notes.length) return "";
@@ -305,7 +306,7 @@
         const hidden = !vis.has(c);
         const label = hidden ? '<span class="blurtext" aria-hidden="true">' + fake(t.id + key + i, 4, 11) + '</span><span class="sr">hidden note</span>' : esc(note);
         const cls = "bar" + (hidden ? " bar--hidden" : "") + (!hidden && shared.has(c) && !game.over ? " bar--shared" : "");
-        return '<li class="' + cls + '" style="--w:' + w.toFixed(1) + "%;--c:" + col + ";--t:" + ink(col) + '">' + label + "</li>";
+        return '<li class="' + cls + '" style="--n:' + (barIndex++) + ";--w:" + w.toFixed(1) + "%;--c:" + col + ";--t:" + ink(col) + '">' + label + "</li>";
       }).join("") + "</ul></section>";
     };
     const flat = !t.top.length && !t.base.length;
@@ -456,6 +457,16 @@
     $("#bottle").addEventListener("animationend", () => $("#bottle").classList.remove("bottle--pop"));
     $("#bottle").addEventListener("contextmenu", (e) => { if (!game.over) e.preventDefault(); });
     $("#count").textContent = ALL.length;
+    const root = document.documentElement;
+    const isDark = () => root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+    const syncTheme = () => $("#theme-toggle").setAttribute("aria-label", isDark() ? "Switch to light theme" : "Switch to dark theme");
+    $("#theme-toggle").addEventListener("click", () => {
+      root.dataset.theme = isDark() ? "light" : "dark";
+      try { localStorage.setItem("blindspritz2:theme", root.dataset.theme); } catch (e) { /* storage blocked */ }
+      syncTheme();
+    });
+    syncTheme();
+    setTimeout(() => root.classList.remove("intro"), 2200);
     setupCombobox();
     newGame(true);
   }
