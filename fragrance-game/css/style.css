@@ -294,6 +294,123 @@ figcaption:has(.bottle__name:empty) { display: none; }
 .foot { border-top: 1px solid var(--line); padding-top: 16px; font-size: 12px; color: var(--faint); }
 .foot p { margin: 0; max-width: 62ch; }
 
+/* ---------- phone app layout: everything on one screen, no page scroll ---------- */
+.mobile-only, .sheet__head, .sheet__blurb { display: none; }
+.pager { display: none; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.pager__btn {
+  width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface);
+  font-size: 18px; line-height: 1; cursor: pointer; color: var(--ink);
+}
+.pager__btn:disabled { opacity: 0.35; cursor: default; }
+.backdrop { position: fixed; inset: 0; z-index: 40; background: rgba(0, 0, 0, 0.4); animation: fade 200ms ease both; }
+
+@media (max-width: 759px) {
+  html, body { height: 100%; overflow: hidden; }
+  .mobile-only { display: inline-flex; }
+  .pager { display: inline-flex; }
+  .foot, .tagline, .blurb, .top__round { display: none; }
+
+  .page {
+    height: 100dvh; max-width: 760px; overflow: hidden;
+    padding-block: max(10px, env(safe-area-inset-top, 0px)) max(10px, env(safe-area-inset-bottom, 0px));
+    display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 10px;
+  }
+  .top { flex-wrap: nowrap; align-items: center; gap: 10px; }
+  .brand { flex: 1 1 auto; }
+  .top h1 { font-size: 34px; line-height: 1; }
+  .top__meta { display: flex; flex: 0 0 auto; gap: 8px; }
+  .theme { width: 38px; height: 38px; }
+  #settings-btn svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+
+  /* Bottom sheets for settings and hints. */
+  .sheet {
+    position: fixed; z-index: 50; left: 0; right: 0; bottom: 0;
+    background: var(--bg); border-radius: 22px 22px 0 0; box-shadow: 0 -12px 40px -10px rgba(0, 0, 0, 0.35);
+    padding: 16px max(16px, env(safe-area-inset-right, 0px)) max(20px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+    display: none !important; flex-direction: column; gap: 12px; max-height: 80dvh; overflow-y: auto;
+  }
+  .sheet-settings #settings-sheet, .sheet-hints #hints { display: flex !important; animation: sheet-up 320ms cubic-bezier(.2, .9, .3, 1) both; }
+  @keyframes sheet-up { from { transform: translateY(100%); } to { transform: none; } }
+  .sheet__head { display: flex; justify-content: space-between; align-items: center; }
+  .sheet__head h2 { margin: 0; font: 400 28px/1 var(--f-name); }
+  .sheet__blurb { display: block; margin: 0; font-size: 13px; color: var(--muted); }
+  .settings .seg { align-self: flex-start; }
+  .hints .row-head { align-items: center; gap: 10px; }
+  .hints .row-head span { margin-left: auto; }
+
+  /* The board fills the rest of the screen. */
+  .board {
+    display: grid; gap: 8px 12px; min-height: 0;
+    grid-template-columns: 76px minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+    grid-template-areas: "bottle facts" "bottle count" "notes notes" "guesses guesses" "ask ask";
+  }
+  .bottle { grid-area: bottle; align-self: start; }
+  .facts { grid-area: facts; align-self: end; text-align: left; font-size: 12px; }
+  .notes-count { grid-area: count; margin: 0; align-self: start; font-size: 11.5px; }
+  #notes { grid-area: notes; }
+  .guess-block { grid-area: guesses; gap: 6px; }
+  .ask { grid-area: ask; }
+  .result { grid-area: notes; }
+  .hints { order: 0; }
+
+  .bottle__frame { width: 76px; border-radius: 14px; }
+  .bottle__frame canvas { filter: blur(9px) saturate(1.25); }
+  .bottle__q { font-size: 36px; }
+  .facts:empty, .facts[hidden] { display: block !important; visibility: hidden; }
+
+  /* Notes: three columns side by side, compact bars. */
+  #notes {
+    max-width: none; margin: 0; min-height: 0; overflow-y: auto; align-content: start;
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px;
+  }
+  .tier { gap: 5px; align-content: start; }
+  .tier h3 { font-size: 18px; }
+  .bars { gap: 3px; }
+  .bar {
+    width: max(var(--w), 84%); min-width: 0; padding: 3px 6px; font-size: 11.5px; line-height: 1.2;
+    white-space: normal; overflow-wrap: break-word; hyphens: auto; text-overflow: clip; border-radius: 0 6px 6px 0;
+  }
+  .bar--hidden { white-space: nowrap; overflow: hidden; }
+  .bar--shared { padding-left: 22px; }
+  .bar--shared::before { left: 4px; width: 14px; height: 14px; font-size: 8.5px; box-shadow: 0 0 0 1.5px var(--bg); }
+  .legend-shared i { width: 13px; height: 13px; font-size: 8px; }
+
+  /* One guess at a time, swipe or use the arrows for older ones. */
+  .guess-block .row-head h2 { font-size: 20px; }
+  .guess-block .row-head { align-items: center; gap: 8px; }
+  .guess-block .row-head > span:last-child { margin-left: auto; }
+  .empty { font-size: 12.5px; margin: 0; }
+  .guesses { gap: 0; }
+  .guess { display: none; gap: 5px; }
+  .guess.is-current { display: grid; }
+  .guess__name { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tiles { gap: 3px; }
+  .tile { min-height: 42px; padding: 5px 6px; border-radius: 6px; }
+  .tile__k { font-size: 9.5px; }
+  .tile__v { font-size: 11.5px; }
+
+  .ask { gap: 6px; }
+  .ask #give-up { display: none; }
+  .combo input { padding: 11px 14px; border-radius: 12px; }
+  .ask .btn { padding: 10px 12px; }
+  .listbox { top: auto; bottom: calc(100% + 6px); max-height: 46dvh; }
+
+  /* Round over: the bottle takes the stage, the result sits under it. */
+  .board.is-over {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr);
+    grid-template-areas: "bottle" "facts" "notes";
+  }
+  .board.is-over .bottle { justify-self: center; }
+  .board.is-over .bottle__frame { width: min(52vw, 34dvh, 220px); border-radius: 22px; }
+  .board.is-over .bottle__name { font-size: 34px; }
+  .board.is-over .facts { text-align: center; align-self: start; }
+  .board.is-over #notes, .board.is-over .notes-count, .board.is-over .guess-block, .board.is-over .ask { display: none; }
+  .board.is-over .result { display: grid; align-content: start; overflow-y: auto; gap: 10px; }
+  .result__facts { gap: 4px 16px; }
+}
+
 /* ---------- opening animation ---------- */
 @keyframes rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
 @keyframes card-in { from { opacity: 0; transform: scale(0.9) rotate(-2deg); } to { opacity: 1; transform: none; } }

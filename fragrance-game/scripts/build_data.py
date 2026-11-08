@@ -69,7 +69,7 @@ def main(cleaned, perfumes):
             "id": fid, "name": clean_name(p["Name"], slug), "brand": brand, "country": r["Country"],
             "gender": GENDER.get(r["Gender"], "Unisex"), "year": year,
             "rating": round(float(r["Rating Value"].replace(",", ".")), 2), "votes": int(r["Rating Count"]),
-            "perfumers": [" ".join(w[:1].upper() + w[1:] for w in x.split()) for x in (r["Perfumer1"], r["Perfumer2"]) if x and x != "unknown"],
+            "perfumers": [re.sub(r"(^|[\s\-'])(\w)", lambda m: m.group(1) + m.group(2).upper(), x) for x in (r["Perfumer1"], r["Perfumer2"]) if x and x != "unknown"],
             "accords": [a.lower() for a in accords][:10],
             "top": notes(r["Top"]), "heart": notes(r["Middle"]), "base": notes(r["Base"]),
         

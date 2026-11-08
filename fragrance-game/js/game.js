@@ -209,6 +209,7 @@
     if (game.over || !h || game.hints.length >= m.hints || (!h.repeat && game.hints.includes(id))) return;
     if (id === "note" && visibleNotes().size >= noteSet(game.target).size) return;
     game.hints.push(id); save(); render();
+    if (phone()) openSheet(null);
   }
 
   // ---------- turns ----------
@@ -413,12 +414,19 @@
   }
 
   const ARROW = { 1: "↑", "-1": "↓" };
+  let viewIdx = -1; // which guess the phone layout shows; -1 means the latest
   function renderGuesses(animate) {
     const m = MODES[game.mode];
-    $("#guess-count").textContent = game.guesses.length + " / " + m.guesses;
+    const n = game.guesses.length;
+    $("#guess-count").textContent = n + " / " + m.guesses;
+    if (animate || viewIdx >= n) viewIdx = -1;
+    const cur = viewIdx < 0 ? n - 1 : viewIdx;
+    $("#guess-pos").textContent = n ? (cur + 1) + " of " + n : "";
+    $("#guess-prev").disabled = cur <= 0;
+    $("#guess-next").disabled = cur >= n - 1;
     const rows = game.guesses.slice().reverse().map((id, idx) => {
       const g = byId(id);
-      return '<li class="guess' + (animate && idx === 0 ? " guess--new" : "") + '">' +
+      return '<li class="guess' + (animate && idx === 0 ? " guess--new" : "") + (n - 1 - idx === cur ? " is-current" : "") + '">' +
         '<p class="guess__name"><strong>' + esc(g.name) + "</strong> " + esc(g.brand) + "</p>" +
         '<div class="tiles">' + compare(g, game.target).map((c, i) =>
           '<div class="tile tile--' + c.state + '" style="--i:' + i + '"><span class="tile__k">' + c.label + '</span><span class="tile__v">' + esc(c.value) +
@@ -471,8 +479,47 @@
     renderHints();
     renderGuesses(animate);
     renderEnd();
+    document.querySelector(".board").classList.toggle("is-over", game.over);
+    $("#hints-btn").textContent = "Hints · " + Math.max(0, MODES[game.mode].hints - game.hints.length);
+    $("#hints-btn").disabled = game.over;
+    $("#give-up-sheet").disabled = game.over;
+    $("#sheet-blurb").textContent = $("#mode-blurb").textContent;
     $("#round").textContent = game.daily ? "Daily · " + game.date : "Unlimited";
-    if (animate && game.over) $("#bottle").scrollIntoView({ behavior: "smooth", block: "start" });
+    if (animate && game.over && !phone()) $("#bottle").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  // ---------- phone layout: sheets and guess pager ----------
+  const phone = () => matchMedia("(max-width: 759px)").matches;
+  function openSheet(name) {
+    const root = document.documentElement;
+    root.classList.remove("sheet-settings", "sheet-hints");
+    if (name) root.classList.add("sheet-" + name);
+    $("#backdrop").hidden = !name;
+    $("#settings-btn").setAttribute("aria-expanded", String(name === "settings"));
+    $("#hints-btn").setAttribute("aria-expanded", String(name === "hints"));
+  }
+  function setupPhone() {
+    $("#settings-btn").addEventListener("click", () => openSheet(document.documentElement.classList.contains("sheet-settings") ? null : "settings"));
+    $("#hints-btn").addEventListener("click", () => openSheet("hints"));
+    $("#backdrop").addEventListener("click", () => openSheet(null));
+    document.querySelectorAll("[data-close-sheet]").forEach((b) => b.addEventListener("click", () => openSheet(null)));
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") openSheet(null); });
+    const page = (d) => {
+      const n = game.guesses.length;
+      const cur = viewIdx < 0 ? n - 1 : viewIdx;
+      const next = Math.max(0, Math.min(n - 1, cur + d));
+      viewIdx = next === n - 1 ? -1 : next;
+      renderGuesses(false);
+    };
+    $("#guess-prev").addEventListener("click", () => page(-1));
+    $("#guess-next").addEventListener("click", () => page(1));
+    let sx = null;
+    $("#guesses").addEventListener("touchstart", (e) => { sx = e.touches[0].clientX; }, { passive: true });
+    $("#guesses").addEventListener("touchend", (e) => {
+      if (sx === null) return;
+      const dx = e.changedTouches[0].clientX - sx; sx = null;
+      if (Math.abs(dx) > 40) page(dx > 0 ? -1 : 1);
+    });
   }
 
   // ---------- autocomplete ----------
@@ -526,9 +573,11 @@
       prefs[key] = b.dataset[attr]; store.set("prefs", prefs); newGame(true);
     }));
     setupSegments();
+    setupPhone();
     bind("mode", "mode"); bind("play", "play"); bind("gender", "gender");
     $("#hint-buttons").addEventListener("click", (e) => { const b = e.target.closest("[data-hint]"); if (b) useHint(b.dataset.hint); });
     $("#give-up").addEventListener("click", giveUp);
+    $("#give-up-sheet").addEventListener("click", () => { openSheet(null); giveUp(); });
     $("#bottle").addEventListener("animationend", () => $("#bottle").classList.remove("bottle--pop"));
     $("#bottle").addEventListener("contextmenu", (e) => { if (!game.over) e.preventDefault(); });
     $("#count").textContent = ALL.length;
