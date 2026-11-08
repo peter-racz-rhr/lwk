@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LOW NOON</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  :root { --red: #e0603a; --blue: #4a8ae0; --sand: #f0d9a8; --ink: #1a120b; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color: #fff;
+    font-family: 'Press Start 2P', 'Courier New', monospace; user-select: none; }
+  #game { position: fixed; inset: 0; width: 100vw; height: 100vh; image-rendering: pixelated; image-rendering: crisp-edges; display: block; }
+  .hidden { display: none !important; }
+  .shadow { text-shadow: 2px 2px 0 #000; }
+
+  /* ---------- menu */
+  #menu { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(ellipse at center, rgba(60,30,10,.55), rgba(0,0,0,.85)); z-index: 20; }
+  .panel { width: min(560px, 92vw); background: rgba(20,12,6,.92); border: 4px solid #c9904a; padding: 26px 26px 20px;
+    box-shadow: 8px 8px 0 #000; }
+  .title { font-size: 40px; color: #ffcf6e; text-align: center; letter-spacing: 2px; text-shadow: 4px 4px 0 #8a3d14, 8px 8px 0 #000; margin: 4px 0 6px; }
+  .subtitle { text-align: center; font-size: 9px; color: #e8c79a; margin-bottom: 22px; line-height: 1.6; }
+  label { display: block; font-size: 10px; color: #e8c79a; margin: 12px 0 6px; }
+  input[type=text], select { width: 100%; font: inherit; font-size: 12px; padding: 10px; background: #0d0905; color: #fff;
+    border: 3px solid #6b4a2a; outline: none; }
+  input[type=text]:focus, select:focus { border-color: #ffcf6e; }
+  .row { display: flex; gap: 12px; }
+  .row > div { flex: 1; }
+  input[type=range] { width: 100%; accent-color: #ffcf6e; }
+  #playBtn { margin-top: 20px; width: 100%; font: inherit; font-size: 18px; padding: 16px; cursor: pointer;
+    background: #e0603a; color: #fff; border: 4px solid #000; box-shadow: 4px 4px 0 #000; text-shadow: 2px 2px 0 #000; }
+  #playBtn:hover { background: #f07a4a; }
+  #playBtn:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #000; }
+  .controls { margin-top: 18px; font-size: 8px; line-height: 2; color: #bba183; columns: 2; }
+  .controls b { color: #ffcf6e; font-weight: normal; }
+  #status { margin-top: 12px; font-size: 9px; color: #ff9a7a; text-align: center; min-height: 12px; }
+
+  /* ---------- pause */
+  #pause { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 15;
+    background: rgba(0,0,0,.45); font-size: 16px; cursor: pointer; flex-direction: column; gap: 16px; }
+  #pause small { font-size: 9px; color: #ccc; }
+
+  /* ---------- HUD */
+  #hud { position: fixed; inset: 0; pointer-events: none; z-index: 10; }
+  #topbar { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); display: flex; align-items: stretch; gap: 0; }
+  .score { min-width: 64px; padding: 8px 10px; font-size: 18px; text-align: center; border: 3px solid #000; }
+  .score small { display: block; font-size: 7px; margin-top: 4px; opacity: .9; }
+  #scRed { background: rgba(170,60,30,.85); }
+  #scBlue { background: rgba(40,80,160,.85); }
+  #timer { min-width: 92px; padding: 8px 10px; font-size: 18px; text-align: center; background: rgba(0,0,0,.65); border-top: 3px solid #000; border-bottom: 3px solid #000; }
+  #timer.bomb { color: #ff4a3a; animation: blink .5s steps(2) infinite; }
+  #timer small { display: block; font-size: 7px; margin-top: 4px; color: #ddd; }
+  @keyframes blink { 50% { opacity: .4; } }
+
+  #health { position: absolute; left: 16px; bottom: 16px; display: flex; align-items: center; gap: 10px; font-size: 26px; }
+  #health .icon { color: #ff5a4a; font-size: 22px; }
+  #hpbar { width: 140px; height: 12px; background: rgba(0,0,0,.6); border: 2px solid #000; }
+  #hpfill { height: 100%; background: #9be36a; width: 100%; }
+  #ammo { position: absolute; right: 16px; bottom: 16px; text-align: right; font-size: 26px; }
+  #ammo small { display: block; font-size: 10px; color: #ffcf6e; margin-bottom: 6px; }
+  #ammo span.res { font-size: 14px; color: #ccc; }
+
+  #crosshair { position: absolute; left: 50%; top: 50%; width: 0; height: 0; }
+  #crosshair i { position: absolute; background: #7dff6a; box-shadow: 0 0 0 1px #000; }
+  #crosshair .h { width: 8px; height: 2px; top: -1px; }
+  #crosshair .v { width: 2px; height: 8px; left: -1px; }
+  #hitmark { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; transform: translate(-50%,-50%) rotate(45deg); opacity: 0; }
+  #hitmark::before, #hitmark::after { content: ''; position: absolute; background: #fff; }
+  #hitmark::before { left: 10px; top: 0; width: 2px; height: 22px; box-shadow: 0 0 0 1px #000; }
+  #hitmark::after { top: 10px; left: 0; height: 2px; width: 22px; box-shadow: 0 0 0 1px #000; }
+  #hitmark.head::before, #hitmark.head::after { background: #ff4a3a; }
+
+  #killfeed { position: absolute; right: 12px; top: 12px; display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
+  #killfeed div { font-size: 9px; padding: 6px 8px; background: rgba(0,0,0,.6); }
+  #killfeed div.me { border: 2px solid #ff4a3a; }
+  .tred { color: #ff8a5a; } .tblue { color: #7ab0ff; }
+
+  #center { position: absolute; left: 50%; top: 26%; transform: translateX(-50%); text-align: center; font-size: 24px; white-space: nowrap; }
+  #center small { display: block; margin-top: 12px; font-size: 10px; color: #f0d9a8; }
+  #hint { position: absolute; left: 50%; top: 62%; transform: translateX(-50%); font-size: 10px; color: #ffcf6e; text-align: center; }
+  #progress { position: absolute; left: 50%; top: 66%; transform: translateX(-50%); width: 260px; height: 14px; border: 3px solid #000; background: rgba(0,0,0,.6); }
+  #progfill { height: 100%; width: 0; background: #ffcf6e; }
+  #spec { position: absolute; left: 50%; bottom: 70px; transform: translateX(-50%); font-size: 11px; text-align: center; background: rgba(0,0,0,.5); padding: 8px 12px; }
+  #spec small { display: block; font-size: 8px; color: #ccc; margin-top: 6px; }
+  #chat { position: absolute; left: 12px; bottom: 80px; font-size: 8px; display: flex; flex-direction: column; gap: 4px; color: #eee; }
+  #radar { position: absolute; left: 12px; top: 12px; width: 150px; height: 194px; border: 3px solid #000; background: rgba(0,0,0,.35); image-rendering: pixelated; }
+  #sidebadge { position: absolute; left: 12px; top: 214px; font-size: 9px; padding: 6px 8px; border: 2px solid #000; }
+
+  #scoreboard { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); width: min(640px, 94vw); background: rgba(10,6,3,.9); border: 4px solid #c9904a; padding: 16px; font-size: 10px; }
+  #scoreboard h3 { margin: 6px 0 8px; font-size: 12px; font-weight: normal; }
+  #scoreboard table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+  #scoreboard td { padding: 6px 4px; border-bottom: 1px solid rgba(255,255,255,.1); }
+  #scoreboard td.n { text-align: right; width: 50px; }
+  #scoreboard tr.dead { opacity: .45; }
+  #scoreboard tr.me td { color: #ffcf6e; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="hud" class="hidden">
+  <canvas id="radar" width="150" height="194"></canvas>
+  <div id="sidebadge" class="shadow"></div>
+  <div id="topbar" class="shadow">
+    <div id="scRed" class="score">0<small>RED</small></div>
+    <div id="timer">1:40<small>ROUND 1</small></div>
+    <div id="scBlue" class="score">0<small>BLUE</small></div>
+  </div>
+  <div id="killfeed"></div>
+  <div id="crosshair"><i class="h" id="chL"></i><i class="h" id="chR"></i><i class="v" id="chU"></i><i class="v" id="chD"></i></div>
+  <div id="hitmark"></div>
+  <div id="center" class="shadow"></div>
+  <div id="hint" class="shadow"></div>
+  <div id="progress" class="hidden"><div id="progfill"></div></div>
+  <div id="spec" class="shadow hidden"></div>
+  <div id="chat" class="shadow"></div>
+  <div id="health" class="shadow"><span class="icon">✚</span><span id="hpnum">100</span><div id="hpbar"><div id="hpfill"></div></div></div>
+  <div id="ammo" class="shadow"><small id="wname">RIFLE</small><span id="mag">30</span> <span class="res">/ <span id="res">90</span></span></div>
+  <div id="scoreboard" class="hidden"></div>
+</div>
+
+<div id="pause" class="hidden shadow">CLICK TO CONTINUE<small>TAB = scoreboard · ESC = release mouse</small></div>
+
+<div id="menu">
+  <div class="panel">
+    <div class="title">LOW NOON</div>
+    <div class="subtitle">2v2 desert tactical shooter<br>Attackers plant the bomb · Defenders stop them · First to 7</div>
+    <label for="nameIn">YOUR NAME</label>
+    <input id="nameIn" type="text" maxlength="16" placeholder="Player" autocomplete="off">
+    <div class="row">
+      <div>
+        <label for="teamIn">TEAM</label>
+        <select id="teamIn"><option value="auto">AUTO</option><option value="red">RED</option><option value="blue">BLUE</option></select>
+      </div>
+      <div>
+        <label for="resIn">PIXELS</label>
+        <select id="resIn"><option value="240">CHUNKY 240p</option><option value="300" selected>PS2 300p</option><option value="400">SHARP 400p</option><option value="540">HD-ISH 540p</option></select>
+      </div>
+    </div>
+    <div class="row">
+      <div><label for="sensIn">MOUSE SENS <span id="sensVal">1.0</span></label><input id="sensIn" type="range" min="0.2" max="3" step="0.1" value="1"></div>
+      <div><label for="volIn">VOLUME</label><input id="volIn" type="range" min="0" max="1" step="0.05" value="0.7"></div>
+    </div>
+    <button id="playBtn">PLAY</button>
+    <div id="status"></div>
+    <div class="controls">
+      <b>WASD</b> move<br><b>MOUSE</b> aim / shoot<br><b>SPACE</b> jump<br><b>SHIFT</b> walk (quiet)<br><b>C</b> crouch<br>
+      <b>R</b> reload<br><b>1 2 3</b> rifle / pistol / knife<br><b>E</b> hold: plant / defuse<br><b>TAB</b> scoreboard<br><b>T</b> chat
+    </div>
+  </div>
+</div>
+
+<script type="module" src="/client.js"></script>
+</body>
+</html>
