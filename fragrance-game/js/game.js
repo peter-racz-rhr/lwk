@@ -1,4 +1,4 @@
-/* Blind Spritz: guess the fragrance from its notes. */
+/* Blind Buy: guess the fragrance from its notes. */
 (function () {
   "use strict";
 
@@ -457,7 +457,7 @@
     const m = MODES[game.mode];
     const emoji = { hit: "🟩", near: "🟨", miss: "⬜" };
     const lines = game.guesses.map((id) => compare(byId(id), game.target).map((c) => emoji[c.state]).join(""));
-    const text = "Blind Spritz · " + m.label + (game.gender !== "all" ? " · " + GENDERS[game.gender] : "") + (game.daily ? " · " + game.date : "") +
+    const text = "Blind Buy · " + m.label + (game.gender !== "all" ? " · " + GENDERS[game.gender] : "") + (game.daily ? " · " + game.date : "") +
       " · " + (game.won ? game.guesses.length : "X") + "/" + m.guesses + "\n" + lines.join("\n");
     const out = $("#copied");
     const fallback = () => { const ta = $("#share-text"); ta.hidden = false; ta.value = text; ta.select(); out.textContent = "Copy the text above."; };
@@ -546,6 +546,6 @@
     newGame(true);
   }
 
-  window.BlindSpritz = { compare, canon, MODES };
+  window.BlindBuy = { compare, canon, MODES };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
 })();

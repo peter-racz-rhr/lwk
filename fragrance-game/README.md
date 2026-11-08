@@ -1,4 +1,4 @@
-# Blind Spritz
+# Blind Buy
 
 A guessing game for fragrance people, in the style of the football-player guessing games. You get a fragrance's note pyramid, drawn as coloured bars grouped into top, heart and base, and a blurred photo of its bottle, and you guess which fragrance it is. Each guess is compared with the answer on ten traits. When the round ends, the bottle comes into focus.
 
