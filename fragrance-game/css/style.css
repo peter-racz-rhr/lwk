@@ -69,22 +69,25 @@ main { display: grid; gap: 40px; }
   background: var(--card); border-radius: 18px; overflow: hidden;
   transition: width 700ms cubic-bezier(.2, .8, .2, 1);
 }
-.bottle__frame img {
-  width: 100%; height: 100%; object-fit: contain; display: block;
-  filter: blur(var(--blur, 24px)) saturate(1.15);
-  transform: scale(1.12);
-  opacity: 0;
-  transition: filter 900ms ease, transform 900ms ease, opacity 300ms ease;
+.bottle__frame canvas, .bottle__frame img {
+  position: absolute; inset: 0; width: 100%; height: 100%; display: block;
+  -webkit-user-drag: none; user-select: none;
 }
-.bottle--loaded .bottle__frame img { opacity: 1; }
+.bottle__frame canvas {
+  filter: blur(14px) saturate(1.2); transform: scale(1.25);
+  opacity: 0; transition: opacity 400ms ease, filter 700ms ease;
+  pointer-events: none;
+}
+.bottle--drawn .bottle__frame canvas { opacity: 1; }
+.bottle__frame img { object-fit: contain; opacity: 0; transition: opacity 600ms ease; }
+.bottle--sharp .bottle__frame img { opacity: 1; }
+.bottle--sharp .bottle__frame canvas { opacity: 0; }
 .bottle__q {
   position: absolute; inset: 0; display: grid; place-items: center;
-  font: 400 64px/1 var(--f-name); color: rgba(21, 21, 21, 0.28); pointer-events: none;
+  font: 400 64px/1 var(--f-name); color: rgba(21, 21, 21, 0.3); pointer-events: none;
   transition: opacity 300ms ease;
 }
-.bottle--missing .bottle__frame img { display: none; }
 .bottle--revealed .bottle__frame { width: 280px; }
-.bottle--revealed .bottle__frame img { filter: none; transform: none; }
 .bottle--revealed .bottle__q { opacity: 0; }
 .bottle--revealed.bottle--missing .bottle__q { opacity: 1; }
 .bottle--pop .bottle__frame { animation: pop 700ms cubic-bezier(.2, .8, .2, 1); }
@@ -96,6 +99,17 @@ figcaption:has(.bottle__name:empty) { display: none; }
 .bottle__brand { font-size: 14px; color: var(--muted); }
 
 .facts { margin: 0; font-size: 13px; color: var(--muted); text-align: center; text-wrap: balance; }
+
+/* ---------- accords ---------- */
+.accords-box { width: 100%; max-width: 360px; display: grid; gap: 8px; }
+.accords-title { margin: 0; text-align: center; font-size: 13px; font-weight: 600; color: var(--ink); }
+.accords { display: grid; gap: 2px; }
+.accord {
+  width: var(--w); min-width: 34%; background: var(--c); color: var(--t);
+  border-radius: 0 7px 7px 0; padding: 4px 8px; text-align: center;
+  font-size: 13px; font-weight: 600; line-height: 1.3; white-space: nowrap; overflow: hidden;
+}
+.blurtext { filter: blur(5px); user-select: none; pointer-events: none; }
 
 /* ---------- notes ---------- */
 #notes { width: 100%; }
@@ -110,7 +124,7 @@ figcaption:has(.bottle__name:empty) { display: none; }
   animation: fade 400ms ease both;
 }
 .note--shared { border-color: var(--near); box-shadow: inset 0 0 0 1px var(--near); }
-.note--hidden { width: 58px; height: 30px; border-style: dashed; animation: none; }
+.note--blur { animation: none; color: var(--muted); }
 .notes-count { margin: -10px 0 0; font-size: 12px; color: var(--faint); }
 .notes-count:empty { display: none; }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }

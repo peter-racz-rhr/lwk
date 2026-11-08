@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Blind Spritz</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="description" content="Guess the fragrance from its notes. The bottle stays blurred until the round ends.">
+<meta name="description" content="Guess the fragrance from Fragrantica's top 250 by its notes and accords. The bottle stays blurred until the round ends.">
 <meta property="og:title" content="Blind Spritz">
-<meta property="og:description" content="Guess the fragrance from its notes. The bottle stays blurred until the round ends.">
+<meta property="og:description" content="Guess the fragrance from Fragrantica's top 250 by its notes and accords. The bottle stays blurred until the round ends.">
 <meta property="og:type" content="website">
 <meta name="theme-color" content="#f6f5f2">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='11' y='3' width='10' height='6' rx='1' fill='%23151515'/%3E%3Crect x='6' y='10' width='20' height='19' rx='4' fill='%23151515'/%3E%3C/svg%3E">
@@ -45,8 +45,8 @@
   <main>
     <section class="stage" id="stage" aria-label="Hidden fragrance">
       <figure class="bottle" id="bottle">
-        <div class="bottle__frame">
-          <img id="bottle-img" alt="" width="375" height="500" decoding="async" referrerpolicy="no-referrer">
+        <div class="bottle__frame" id="bottle-frame">
+          <canvas id="bottle-blur" width="150" height="200" aria-label="Blurred bottle of the hidden fragrance" role="img"></canvas>
           <span class="bottle__q" aria-hidden="true">?</span>
         </div>
         <figcaption>
@@ -55,6 +55,10 @@
         </figcaption>
       </figure>
       <p class="facts" id="facts" hidden></p>
+      <div class="accords-box">
+        <h2 class="accords-title">main accords</h2>
+        <div class="accords" id="accords" role="img"></div>
+      </div>
       <div id="notes"></div>
       <p class="notes-count" id="notes-count"></p>
     </section>
@@ -83,11 +87,10 @@
   </main>
 
   <footer class="foot">
-    <p><span id="count"></span> fragrances. Notes and bottle images come from Fragrantica. Lasting, sillage and hype are rounded from its community votes. This is a fan project with no link to Fragrantica or any perfume house.</p>
+    <p>The <span id="count"></span> most-voted fragrances on Fragrantica, taken from a public Fragrantica dataset. Notes, accords, ratings and bottle photos are Fragrantica's. This is a fan project with no link to Fragrantica or any perfume house.</p>
   </footer>
 </div>
 <script src="js/data.js"></script>
-<script src="js/data.extra.js"></script>
 <script src="js/game.js"></script>
 </body>
 </html>
