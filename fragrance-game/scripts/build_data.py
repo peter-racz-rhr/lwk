@@ -46,9 +46,9 @@ def notes(s):
 
 
 def main(cleaned, perfumes):
-    rows = list(csv.DictReader(open(cleaned, encoding="utf-8", errors="replace"), delimiter=";"))
+    rows = list(csv.DictReader(open(cleaned, encoding="cp1252"), delimiter=";"))  # this file is Windows-1252
     extra = {}
-    for r in csv.DictReader(open(perfumes, encoding="utf-8", errors="replace")):
+    for r in csv.DictReader(open(perfumes, encoding="utf-8")):
         m = re.search(r"-(\d+)\.html", r["url"])
         if m:
             extra[int(m.group(1))] = r
@@ -69,9 +69,10 @@ def main(cleaned, perfumes):
             "id": fid, "name": clean_name(p["Name"], slug), "brand": brand, "country": r["Country"],
             "gender": GENDER.get(r["Gender"], "Unisex"), "year": year,
             "rating": round(float(r["Rating Value"].replace(",", ".")), 2), "votes": int(r["Rating Count"]),
-            "perfumers": [x.title() for x in (r["Perfumer1"], r["Perfumer2"]) if x and x != "unknown"],
+            "perfumers": [" ".join(w[:1].upper() + w[1:] for w in x.split()) for x in (r["Perfumer1"], r["Perfumer2"]) if x and x != "unknown"],
             "accords": [a.lower() for a in accords][:10],
             "top": notes(r["Top"]), "heart": notes(r["Middle"]), "base": notes(r["Base"]),
+        
         })
         seen.add(fid)
         if len(out) == LIMIT:
