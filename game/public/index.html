@@ -95,6 +95,34 @@
   #scoreboard td.n { text-align: right; width: 50px; }
   #scoreboard tr.dead { opacity: .45; }
   #scoreboard tr.me td { color: #ffcf6e; }
+
+  /* ---------- economy / buy */
+  #money { position: absolute; left: 16px; bottom: 54px; font-size: 18px; color: #9be36a; }
+  #armor { font-size: 14px; color: #a8c8ff; margin-left: 6px; }
+  #nades { display: block; font-size: 8px; color: #ccc; margin-top: 6px; min-height: 8px; }
+  .bombtag { color: #ffdf3a; }
+  .cashpop { position: absolute; left: 16px; bottom: 84px; font-size: 14px; color: #9be36a; animation: rise 1.5s ease-out forwards; }
+  @keyframes rise { to { transform: translateY(-40px); opacity: 0; } }
+  #scope { position: absolute; inset: 0; background: radial-gradient(circle at center, transparent 0, transparent 34vh, #000 34.3vh); }
+  #scope::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: #000; }
+  #scope::after { content: ''; position: absolute; top: 0; bottom: 0; left: 50%; width: 1px; background: #000; }
+  #buymenu { position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%); width: min(980px, 96vw); max-height: 92vh; overflow: auto; z-index: 25;
+    background: rgba(14,9,4,.94); border: 4px solid #c9904a; box-shadow: 8px 8px 0 #000; padding: 14px; }
+  .bm-head { display: flex; justify-content: space-between; align-items: center; font-size: 14px; color: #ffcf6e; margin-bottom: 12px; }
+  #bmMoney { color: #9be36a; }
+  #bmGrid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+  @media (max-width: 760px) { #bmGrid { grid-template-columns: repeat(2, 1fr); } }
+  .bm-cat { font-size: 9px; color: #e8c79a; margin-bottom: 8px; border-bottom: 2px solid #6b4a2a; padding-bottom: 6px; }
+  .bm-item { display: block; width: 100%; text-align: left; font: inherit; margin-bottom: 8px; padding: 9px 8px; cursor: pointer;
+    background: #2a1a0c; color: #fff; border: 3px solid #6b4a2a; }
+  .bm-item:hover { border-color: #ffcf6e; background: #3a2410; }
+  .bm-item.poor, .bm-item.side { opacity: .4; cursor: not-allowed; }
+  .bm-item.owned { border-color: #4a8a3a; opacity: .7; }
+  .bm-name { display: block; font-size: 9px; }
+  .bm-price { display: block; font-size: 11px; color: #9be36a; margin: 6px 0 4px; }
+  .bm-desc { display: block; font-size: 7px; color: #bba183; line-height: 1.4; }
+  .bm-foot { margin-top: 8px; font-size: 8px; color: #bba183; display: flex; justify-content: space-between; align-items: center; }
+  #bmClose { font: inherit; font-size: 9px; padding: 8px 12px; background: #e0603a; color: #fff; border: 3px solid #000; cursor: pointer; }
 </style>
 </head>
 <body>
@@ -109,6 +137,7 @@
     <div id="scBlue" class="score">0<small>BLUE</small></div>
   </div>
   <div id="killfeed"></div>
+  <div id="scope" class="hidden"></div>
   <div id="crosshair"><i class="h" id="chL"></i><i class="h" id="chR"></i><i class="v" id="chU"></i><i class="v" id="chD"></i></div>
   <div id="hitmark"></div>
   <div id="center" class="shadow"></div>
@@ -116,9 +145,16 @@
   <div id="progress" class="hidden"><div id="progfill"></div></div>
   <div id="spec" class="shadow hidden"></div>
   <div id="chat" class="shadow"></div>
-  <div id="health" class="shadow"><span class="icon">✚</span><span id="hpnum">100</span><div id="hpbar"><div id="hpfill"></div></div></div>
-  <div id="ammo" class="shadow"><small id="wname">RIFLE</small><span id="mag">30</span> <span class="res">/ <span id="res">90</span></span></div>
+  <div id="money" class="shadow">$800</div>
+  <div id="health" class="shadow"><span class="icon">✚</span><span id="hpnum">100</span><div id="hpbar"><div id="hpfill"></div></div><span id="armor"></span></div>
+  <div id="ammo" class="shadow"><small id="wname">PISTOL</small><span id="mag">12</span> <span class="res">/ <span id="res">48</span></span><span id="nades"></span></div>
   <div id="scoreboard" class="hidden"></div>
+</div>
+
+<div id="buymenu" class="hidden">
+  <div class="bm-head"><span>BUY MENU</span><span id="bmMoney">$800</span></div>
+  <div id="bmGrid"></div>
+  <div class="bm-foot"><span>Click to buy · weapons you survive with carry over · B / ESC to close</span><button id="bmClose">CLOSE</button></div>
 </div>
 
 <div id="pause" class="hidden shadow">CLICK TO CONTINUE<small>TAB = scoreboard · ESC = release mouse</small></div>
@@ -126,7 +162,7 @@
 <div id="menu">
   <div class="panel">
     <div class="title">LOW NOON</div>
-    <div class="subtitle">2v2 desert tactical shooter<br>Attackers plant the bomb · Defenders stop them · First to 7</div>
+    <div class="subtitle">2v2 desert tactical shooter<br>Buy gear · Plant the bomb or stop it · First to 7</div>
     <label for="nameIn">YOUR NAME</label>
     <input id="nameIn" type="text" maxlength="16" placeholder="Player" autocomplete="off">
     <div class="row">
@@ -146,8 +182,8 @@
     <button id="playBtn">PLAY</button>
     <div id="status"></div>
     <div class="controls">
-      <b>WASD</b> move<br><b>MOUSE</b> aim / shoot<br><b>SPACE</b> jump<br><b>SHIFT</b> walk (quiet)<br><b>C</b> crouch<br>
-      <b>R</b> reload<br><b>1 2 3</b> rifle / pistol / knife<br><b>E</b> hold: plant / defuse<br><b>TAB</b> scoreboard<br><b>T</b> chat
+      <b>WASD</b> move<br><b>MOUSE</b> aim / shoot<br><b>RMB</b> scope / lob nade<br><b>SPACE</b> jump<br><b>SHIFT</b> walk (quiet)<br><b>C</b> crouch<br>
+      <b>R</b> reload<br><b>B</b> buy menu<br><b>1 2 3 4</b> main / pistol / knife / nades<br><b>E</b> hold: plant / defuse<br><b>G</b> drop bomb<br><b>TAB</b> scoreboard · <b>T</b> chat
     </div>
   </div>
 </div>

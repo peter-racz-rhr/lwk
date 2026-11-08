@@ -1,8 +1,30 @@
 # LOW NOON
 
 A 2v2 round-based tactical shooter that runs in the browser, with a crunchy PS2-era look.
-Attackers plant the bomb at site **A** or **B**, and Defenders stop them or defuse it. First team to **7 rounds** wins, and sides switch after round 6.
-Empty slots are filled with **bots**, so it works with 1, 2, 3 or 4 players.
+Classic bomb mode: Attackers carry the bomb and plant it at site **A** or **B**. Defenders stop them or defuse it.
+First team to **7 rounds** wins, and sides switch after round 6.
+Empty slots are filled with **bots** that buy, carry the bomb, plant and defuse, so it works with 1, 2, 3 or 4 players.
+
+## Economy and buy menu
+- Everyone starts with **$800**. Press **B** in your spawn during the first 20 seconds of a round to buy.
+- Round win: $3250 (elimination/time) or $3500 (bomb exploded/defused). Losing gives $1400, plus $500 more for each loss in a row (up to $3400).
+- If the bomb was planted, the attackers still get +$800 even when they lose. Planting or defusing gives +$300.
+- Kill rewards: rifles/pistols $300, SMG $600, shotgun $900, knife $1500, sniper $100.
+- If you **survive**, you keep your weapons and armor. If you die, you're back to a pistol.
+- Money and gear reset at halftime.
+
+| Item | Price | Notes |
+|---|---|---|
+| P9 Pistol | $200 | default sidearm |
+| Hand Cannon | $700 | heavy pistol, headshot kills |
+| Wasp SMG | $1250 | fast, cheap, good kill money |
+| Thunder-12 | $1100 | shotgun, close range |
+| Raider AR | $2700 | attacker rifle |
+| Guardian AR | $3100 | defender rifle |
+| Longbow | $4750 | sniper, right-click scope, one-shot body |
+| Kevlar / Kevlar+Helmet | $650 / $1000 | armor; helmet protects from headshots |
+| Defuse kit | $400 | defenders: 2.5s defuse instead of 5s |
+| HE / Flashbang / Smoke | $300 / $200 / $300 | grenades |
 
 ## Controls
 | Key | Action |
@@ -13,8 +35,12 @@ Empty slots are filled with **bots**, so it works with 1, 2, 3 or 4 players.
 | Shift | walk (no footstep sounds) |
 | C | crouch (more accurate) |
 | R | reload |
-| 1 / 2 / 3 / Q / wheel | rifle / pistol / knife / last weapon |
-| E (hold) | plant bomb (attackers, inside a site) / defuse (defenders, at the bomb) |
+| Right mouse | sniper scope / underhand grenade throw |
+| 1 / 2 / 3 / 4 | main gun / pistol / knife / grenades (press again to cycle) |
+| Q / wheel | last weapon / cycle weapons |
+| B | buy menu |
+| E (hold) | plant bomb (bomb carrier, inside a site) / defuse (defenders, at the bomb) |
+| G | drop the bomb (give it to a teammate) |
 | Tab | scoreboard |
 | T | chat |
 
