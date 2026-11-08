@@ -12,11 +12,11 @@
   // pixels: how many columns the bottle photo is shrunk to before it is blown back up.
   const MODES = {
     easy: { label: "Easy", guesses: 10, hints: 4, top: 100, pixels: 12, startNotes: Infinity, accordLabels: true, showGender: true,
-      blurb: "The 100 most-voted bottles. All notes and accords are shown." },
-    medium: { label: "Medium", guesses: 8, hints: 3, top: 175, pixels: 8, startNotes: 0.5, accordLabels: true, showGender: false,
+      blurb: "The 100 most-voted bottles. All notes, gender and main accords are shown." },
+    medium: { label: "Medium", guesses: 8, hints: 3, top: 175, pixels: 8, startNotes: 0.5, accordLabels: false, showGender: false,
       blurb: "The top 175. Half the notes start blurred; each miss uncovers one." },
     hard: { label: "Hard", guesses: 6, hints: 3, top: 250, pixels: 5, startNotes: 2, accordLabels: false, showGender: false,
-      blurb: "All 250. Two notes to start, accord names hidden." },
+      blurb: "All 250. Two notes to start; each miss uncovers one." },
   };
   const GENDERS = { all: "All", Masculine: "Men", Feminine: "Women", Unisex: "Unisex" };
 
@@ -36,6 +36,28 @@
     const n = parseInt(hex.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
     return 0.299 * r + 0.587 * g + 0.114 * b > 150 ? "#1a1a1a" : "#ffffff";
   };
+
+  // Colour for a single note, by the accord family it belongs to. First match wins.
+  const NOTE_COLOUR = [
+    [/rosewood|palisander|pepperwood/, "woody"], [/rosemary/, "aromatic"], [/leaf|leaves|green|galbanum|grass|ivy|bamboo|cucumber|reed|mate|cactus|celery|carrot|flax|bulrush/, "green"],
+    [/tea/, "green"], [/blossom|flower|neroli|jasmin|tuberose|gardenia|ylang|magnolia|lily|frangipani|tiare|champaca|honeysuckle|datura|oleander/, "white floral"],
+    [/rose/, "rose"], [/violet/, "violet"], [/iris|orris|heliotrope|powder/, "iris"], [/mimosa|osmanthus|immortelle|narcissus|marigold|tagetes/, "yellow floral"],
+    [/peony|freesia|lotus|orchid|carnation|hyacinth|hiacynth|cyclamen|lilac|hibiscus|wisteria|camelia|floral|petal|amaryllis|bellflower|wallflower|cereus|poppy|mignonette|geranium|pelargonium|silk tree|karo|petalia/, "floral"],
+    [/lavender/, "lavender"], [/sage|basil|mint|thyme|tarragon|artemisia|wormwood|bay|myrtle|chamomile|fennel|angelica|clover|hawthorn/, "aromatic"],
+    [/coconut/, "coconut"], [/almond|hazelnut|chestnut|pistachio|rice/, "nutty"], [/rum|cognac|whiskey|liqueur|martini|malt/, "rum"],
+    [/chocolate|cacao|cocoa|coffee|truffle/, "chocolate"], [/honey|beeswax/, "honey"], [/caramel|toffee|praline|sugar|candy|marshmallow|cupcake|popcorn|licorice/, "caramel"],
+    [/vanill|tonka|coumarin/, "vanilla"], [/milk|cream|kulfi/, "lactonic"],
+    [/bergamot|lemon|lime|orange|mandarin|grapefruit|yuzu|citron|clementine|tangerine|petitgrain|chinotto|citrus|verbena/, "citrus"],
+    [/currant|cassis|pear|peach|apple|plum|raspberr|berr|strawberr|cherr|melon|pineapple|litchi|lychee|apricot|quince|kiwi|mango|passion|fig|pomegranate|nectarine|mirabelle|papaya|persimmon|carambola|rhub|fruit|tomato|tamarind/, "fruity"],
+    [/sea|water|calone|marine|ozon|aquozone|ice/, "aquatic"], [/salt|seaweed/, "salty"], [/mineral|flint|^sand$/, "mineral"],
+    [/pepper|coriander|cardamom|ginger|juniper|elemi/, "fresh spicy"], [/cinnamon|clove|nutmeg|saffron|cumin|caraway|paprika|spice|spicy|anise|cassia|mace|pimento/, "warm spicy"],
+    [/oud|agarwood/, "oud"], [/tobacco/, "tobacco"], [/leather|suede|castoreum/, "leather"], [/civet/, "animalic"], [/incense|smoke|birch|peat/, "smoky"],
+    [/patchouli/, "patchouli"], [/moss/, "mossy"], [/vetiver|cypriol/, "earthy"], [/fir|pine|cypress/, "conifer"],
+    [/amber|labdanum|benzoin|opoponax|resin|styrax|balsam|myrrh|myrhh|olibanum|tolu|liquidambar|mastic/, "amber"],
+    [/musk|ambrette|sylkolide|cotton/, "musky"], [/aldehyde/, "aldehydic"],
+    [/cedar|sandalwood|wood|guaiac|cashmeran|mahogany|papyrus|iso e super|ambroxan|akigalawood|oak|sycamore|olive/, "woody"],
+  ];
+  const noteColour = (n) => { const k = n.toLowerCase(); for (const [re, acc] of NOTE_COLOUR) if (re.test(k)) return ACCORD[acc]; return "#b8b2a7"; };
 
   // ---------- note matching ----------
   const ALIAS = {
@@ -157,7 +179,6 @@
     game.guesses.forEach((id) => { const g = byId(id); if (g && g.id !== game.target.id) noteSet(g).forEach((n) => s.add(n)); });
     return s;
   }
-  const accordsShown = () => game.over || MODES[game.mode].accordLabels || game.hints.includes("accords");
 
   // Stand-in text for anything blurred, so the real word is never in the page.
   function fake(seed, min, max) {
@@ -171,7 +192,7 @@
 
   // ---------- hints ----------
   const HINTS = [
-    { id: "accords", label: "Accord names", value: () => "", hide: (m) => m.accordLabels },
+    { id: "accords", label: "Main accords", value: () => "", hide: (m) => m.accordLabels },
     { id: "gender", label: "Gender", value: (t) => GENDERS[t.gender], hide: (m) => m.showGender || game.gender !== "all" },
     { id: "decade", label: "Decade", value: (t) => (t.year ? Math.floor(t.year / 10) * 10 + "s" : "unknown") },
     { id: "country", label: "Country", value: (t) => t.country },
@@ -268,34 +289,29 @@
     if (justEnded && game.over) { fig.classList.remove("bottle--pop"); void fig.offsetWidth; fig.classList.add("bottle--pop"); }
   }
 
-  function renderAccords() {
-    const t = game.target;
-    const show = accordsShown();
-    const n = t.accords.length;
-    $("#accords").innerHTML = t.accords.map((a, i) => {
-      const col = ACCORD[a] || "#b8b2a7";
-      const w = 100 - (i * 52) / Math.max(1, n - 1);
-      const label = show ? esc(a) : '<span class="blurtext" aria-hidden="true">' + fake(t.id + "a" + i, 4, 9) + "</span>";
-      return '<div class="accord" style="--w:' + w.toFixed(1) + "%;--c:" + col + ";--t:" + ink(col) + '">' + label + "</div>";
-    }).join("");
-    $("#accords").setAttribute("aria-label", show ? "Main accords" : "Main accords, names hidden");
-  }
-
+  // One display: the note pyramid as Fragrantica-style bars, coloured by note family.
   function renderNotes() {
     const t = game.target;
     const vis = visibleNotes(), shared = sharedNotes();
-    const row = (name, notes, tier) => !notes.length ? "" :
-      '<div class="tier"><dt>' + name + '</dt><dd><ul class="notes">' + notes.map((n, i) => {
-        const c = canon(n);
-        if (!vis.has(c)) return '<li class="note note--blur"><span class="blurtext" aria-hidden="true">' + fake(t.id + tier + i, 4, 11) + '</span><span class="sr">hidden note</span></li>';
-        return '<li class="note' + (shared.has(c) && !game.over ? " note--shared" : "") + '">' + esc(n) + "</li>";
-      }).join("") + "</ul></dd></div>";
+    const tier = (name, notes, key) => {
+      if (!notes.length) return "";
+      const n = notes.length;
+      return '<section class="tier"><h3>' + name + '</h3><ul class="bars">' + notes.map((note, i) => {
+        const c = canon(note), col = noteColour(note);
+        const w = n === 1 ? 100 : 100 - (i * 40) / (n - 1);
+        const hidden = !vis.has(c);
+        const label = hidden ? '<span class="blurtext" aria-hidden="true">' + fake(t.id + key + i, 4, 11) + '</span><span class="sr">hidden note</span>' : esc(note);
+        const cls = "bar" + (hidden ? " bar--hidden" : "") + (!hidden && shared.has(c) && !game.over ? " bar--shared" : "");
+        return '<li class="' + cls + '" style="--w:' + w.toFixed(1) + "%;--c:" + col + ";--t:" + ink(col) + '">' + label + "</li>";
+      }).join("") + "</ul></section>";
+    };
     const flat = !t.top.length && !t.base.length;
-    $("#notes").innerHTML = '<dl class="pyramid">' + (flat ? row("Notes", t.heart, "h") : row("Top", t.top, "t") + row("Heart", t.heart, "h") + row("Base", t.base, "b")) + "</dl>";
+    $("#notes").innerHTML = flat ? tier("Notes", t.heart, "h") : tier("Top notes", t.top, "t") + tier("Heart notes", t.heart, "h") + tier("Base notes", t.base, "b");
     const hidden = noteSet(t).size - vis.size;
     $("#notes-count").textContent = hidden > 0 ? hidden + " of " + noteSet(t).size + " notes hidden" : "";
     const facts = [];
     if (MODES[game.mode].showGender || game.over) facts.push(t.gender);
+    if (MODES[game.mode].accordLabels || game.over || game.hints.includes("accords")) facts.push(t.accords.slice(0, 3).join(", "));
     if (game.over) facts.push(t.country, "rated " + t.rating.toFixed(2) + " by " + t.votes.toLocaleString("en-US"));
     $("#facts").textContent = facts.join(" · ");
     $("#facts").hidden = !facts.length;
@@ -373,7 +389,6 @@
   function render(animate) {
     renderControls();
     renderBottle(animate);
-    renderAccords();
     renderNotes();
     renderHints();
     renderGuesses(animate);

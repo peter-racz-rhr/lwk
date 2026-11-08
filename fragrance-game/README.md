@@ -1,6 +1,6 @@
 # Blind Spritz
 
-A guessing game for fragrance people, in the style of the football-player guessing games. You get a fragrance's main accords, its note pyramid and a blurred photo of its bottle, and you guess which fragrance it is. Each guess is compared with the answer on ten traits. When the round ends, the bottle comes into focus.
+A guessing game for fragrance people, in the style of the football-player guessing games. You get a fragrance's note pyramid, drawn as coloured bars grouped into top, heart and base, and a blurred photo of its bottle, and you guess which fragrance it is. Each guess is compared with the answer on ten traits. When the round ends, the bottle comes into focus.
 
 The fragrances are the 250 most-voted on Fragrantica, with houses from the Gulf states left out.
 
@@ -19,13 +19,13 @@ The fragrances are the 250 most-voted on Fragrantica, with houses from the Gulf 
 
 ## Modes
 
-- **Easy**: the 100 most-voted. All notes and accords visible, gender shown. 10 guesses.
+- **Easy**: the 100 most-voted. All notes, gender and the top three accords shown. 10 guesses.
 - **Medium**: the top 175. Half the notes start blurred and one unblurs after each miss. 8 guesses.
-- **Hard**: all 250. Two notes to start, accord names blurred (the colours stay). 6 guesses.
+- **Hard**: all 250. Two notes to start, one more after each miss. 6 guesses.
 
-Filter by **All / Men / Women / Unisex**. Each mode and filter has its own **Daily** bottle, plus **Unlimited** practice. Hints: decade, country, perfumer, brand initial, gender, accord names (hard) and extra notes (medium and hard).
+Filter by **All / Men / Women / Unisex**. Each mode and filter has its own **Daily** bottle, plus **Unlimited** practice. Hidden notes keep their bar colour, so you can still tell a citrus from a wood. Hints: main accords, decade, country, perfumer, brand initial, gender and extra notes.
 
-The hidden bottle is drawn on a canvas from a copy shrunk to a few pixels wide, and the sharp photo is only added to the page when the round ends, so it can't be dragged out or saved early. Blurred notes and accords use stand-in text, so the real names aren't in the page source either.
+The hidden bottle is drawn on a canvas from a copy shrunk to a few pixels wide, and the sharp photo is only added to the page when the round ends, so it can't be dragged out or saved early. Blurred notes use stand-in text, so the real names aren't in the page source either.
 
 ## Run it
 
