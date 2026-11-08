@@ -1,10 +1,15 @@
+@font-face { font-family: "Geist"; src: url("../fonts/geist-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Geist"; src: url("../fonts/geist-latin-500-normal.woff2") format("woff2"); font-weight: 500; font-display: swap; }
+@font-face { font-family: "Geist"; src: url("../fonts/geist-latin-600-normal.woff2") format("woff2"); font-weight: 600; font-display: swap; }
+@font-face { font-family: "Instrument Serif"; src: url("../fonts/instrument-serif-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+
 /* Layout: one narrow column. The blurred bottle sits at the top as the only image; everything else is quiet type. */
 :root {
   --bg: #f5f5f3;
   --card: #ffffff;
   --ink: #151515;
   --muted: #6c6c68;
-  --faint: #a3a39e;
+  --faint: #74746f;
   --line: #e2e1dc;
   --hit: #2f7d4f;
   --hit-ink: #ffffff;
@@ -19,13 +24,13 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #121212; --card: #f3f3f1; --ink: #ececea; --muted: #9a9a95; --faint: #6a6a66; --line: #2a2a28;
+    --bg: #121212; --card: #f3f3f1; --ink: #ececea; --muted: #9a9a95; --faint: #8e8e89; --line: #2a2a28;
     --hit: #3b9462; --hit-ink: #06120b; --near: #d9b44a; --near-ink: #1d1603; --miss: #222220; --miss-ink: #b5b5b0;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #121212; --card: #f3f3f1; --ink: #ececea; --muted: #9a9a95; --faint: #6a6a66; --line: #2a2a28;
+  --bg: #121212; --card: #f3f3f1; --ink: #ececea; --muted: #9a9a95; --faint: #8e8e89; --line: #2a2a28;
   --hit: #3b9462; --hit-ink: #06120b; --near: #d9b44a; --near-ink: #1d1603; --miss: #222220; --miss-ink: #b5b5b0;
   color-scheme: dark;
 }
@@ -35,6 +40,8 @@
 body { margin: 0; background: var(--bg); color: var(--ink); font: 400 15px/1.5 var(--f-ui); -webkit-font-smoothing: antialiased; }
 button, input, textarea { font: inherit; color: inherit; }
 :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.skip { position: absolute; left: 16px; top: -48px; z-index: 20; background: var(--ink); color: var(--bg); padding: 8px 12px; border-radius: 8px; text-decoration: none; font-size: 14px; }
+.skip:focus { top: 12px; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 .page {
@@ -126,7 +133,7 @@ figcaption:has(.bottle__name:empty) { display: none; }
   width: 100%; padding: 13px 16px; font-size: 16px;
   border: 1px solid var(--line); border-radius: 12px; background: var(--bg);
 }
-.combo input:focus { outline: none; border-color: var(--ink); }
+.combo input:focus { outline: 2px solid var(--ink); outline-offset: 1px; border-color: var(--ink); }
 .combo input::placeholder { color: var(--faint); }
 .listbox {
   position: absolute; z-index: 10; left: 0; right: 0; top: calc(100% + 6px);

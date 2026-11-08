@@ -40,3 +40,11 @@ python3 scripts/build_data.py fra_cleaned.csv fra_perfumes.csv
 ```
 
 It ranks fragrances by Fragrantica rating votes, drops Gulf houses, and keeps the top 250 with their notes, accords, rating, vote count, perfumers, year and Fragrantica id. Bottle photos load from Fragrantica's image host (`fimgs.net/mdimg/perfume/375x500.<id>.jpg`). The dataset is a snapshot, so vote counts and the ranking are from when it was scraped, not live.
+
+## Site files
+
+- `fonts/`: Geist and Instrument Serif, self-hosted (SIL Open Font License, licence files included), so the page makes no Google Fonts request.
+- `og-image.png`: link preview image, original artwork.
+- `404.html`, `robots.txt`: for static hosting such as GitHub Pages.
+
+Once the site has a domain, add a `<link rel="canonical">`, make the `og:image` URL absolute, and add a `sitemap.xml`.

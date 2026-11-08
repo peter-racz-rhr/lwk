@@ -27,15 +27,18 @@
     cacao: "#6e4228", coffee: "#5b3a29", almond: "#f0dcb6", nutty: "#b98a52", coconut: "#f6efe2", lactonic: "#f5f0e4", cherry: "#c4123a",
     rum: "#8f3e1e", whiskey: "#a8601e", fruity: "#fb5b33", tropical: "#ff9b3d", citrus: "#f3e22c", fresh: "#9ae8f4", aquatic: "#45c3e6",
     marine: "#3aa2cf", ozonic: "#b2e3f2", salty: "#d7eef2", mineral: "#a8b6bb", metallic: "#b2bcc2", green: "#3fae3b", herbal: "#78a85d",
-    aromatic: "#3b8f7c", lavender: "#9a85d6", "fresh spicy": "#9bc94d", "soft spicy": "#d98a52", "warm spicy": "#d0451b", cinnamon: "#c45a26",
-    anis: "#c3c7a0", amber: "#c86a1a", balsamic: "#a46b3e", woody: "#7b5a3c", earthy: "#6f5a3f", mossy: "#6b7b3a", patchouli: "#5e5a2d",
-    conifer: "#2f6b4d", camphor: "#9fd1c4", oud: "#4b2f22", leather: "#6b3f2e", tobacco: "#9e6b33", smoky: "#7b7b84", animalic: "#7a4d2a",
-    musky: "#c9bfd6", aldehydic: "#dfe7f2", beeswax: "#e6b34b", savory: "#a68a5b", cannabis: "#5e8a3a",
+    aromatic: "#337d6c", lavender: "#9a85d6", "fresh spicy": "#9bc94d", "soft spicy": "#d98a52", "warm spicy": "#d0451b", cinnamon: "#b4501f",
+    anis: "#c3c7a0", amber: "#c86a1a", balsamic: "#966136", woody: "#7b5a3c", earthy: "#6f5a3f", mossy: "#6b7b3a", patchouli: "#5e5a2d",
+    conifer: "#2f6b4d", camphor: "#9fd1c4", oud: "#4b2f22", leather: "#6b3f2e", tobacco: "#9e6b33", smoky: "#6c6c75", animalic: "#7a4d2a",
+    musky: "#c9bfd6", aldehydic: "#dfe7f2", beeswax: "#e6b34b", savory: "#a68a5b", cannabis: "#527a31",
   };
-  const ink = (hex) => {
-    const n = parseInt(hex.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
-    return 0.299 * r + 0.587 * g + 0.114 * b > 150 ? "#1a1a1a" : "#ffffff";
+  // Pick dark or white label text, whichever has more WCAG contrast on the bar.
+  const lum = (hex) => {
+    const n = parseInt(hex.slice(1), 16);
+    const ch = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    return 0.2126 * ch(n >> 16) + 0.7152 * ch((n >> 8) & 255) + 0.0722 * ch(n & 255);
   };
+  const ink = (hex) => { const L = lum(hex); return (L + 0.05) / (lum("#1a1a1a") + 0.05) >= 1.05 / (L + 0.05) ? "#1a1a1a" : "#ffffff"; };
 
   // Colour for a single note, by the accord family it belongs to. First match wins.
   const NOTE_COLOUR = [
