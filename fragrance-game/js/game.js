@@ -236,8 +236,73 @@
     document.querySelectorAll("[data-mode]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === prefs.mode)));
     document.querySelectorAll("[data-play]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.play === prefs.play)));
     document.querySelectorAll("[data-gender]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.gender === prefs.gender)));
+    placeThumbs();
     const m = MODES[prefs.mode];
     $("#mode-blurb").textContent = m.blurb + " " + m.guesses + " guesses.";
+  }
+
+  // Segmented controls: a thumb slides to the chosen option, and can be dragged.
+  function placeThumbs() {
+    document.querySelectorAll(".seg").forEach((seg) => {
+      const thumb = seg.querySelector(".seg__thumb");
+      const on = seg.querySelector('button[aria-pressed="true"]');
+      if (!thumb || !on || seg.classList.contains("is-dragging")) return;
+      thumb.style.setProperty("--x", on.offsetLeft + "px");
+      thumb.style.setProperty("--tw", on.offsetWidth + "px");
+    });
+  }
+  function setupSegments() {
+    document.querySelectorAll(".seg").forEach((seg) => {
+      const thumb = document.createElement("span");
+      thumb.className = "seg__thumb";
+      seg.prepend(thumb);
+      seg.classList.add("has-thumb");
+      const buttons = [...seg.querySelectorAll("button")];
+      let startX = 0, grabOffset = 0, dragging = false, pointer = null, suppressClick = false;
+      const nearest = (x) => buttons.reduce((best, b) => {
+        const d = Math.abs(b.offsetLeft + b.offsetWidth / 2 - x);
+        return d < best.d ? { b, d } : best;
+      }, { b: buttons[0], d: Infinity }).b;
+      seg.addEventListener("pointerdown", (e) => {
+        if (e.button !== 0) return;
+        pointer = e.pointerId; startX = e.clientX; dragging = false;
+        const on = seg.querySelector('button[aria-pressed="true"]') || buttons[0];
+        const box = seg.getBoundingClientRect();
+        grabOffset = e.clientX - box.left - on.offsetLeft;
+        if (grabOffset < 0 || grabOffset > on.offsetWidth) grabOffset = on.offsetWidth / 2;
+      });
+      seg.addEventListener("pointermove", (e) => {
+        if (e.pointerId !== pointer) return;
+        if (!dragging && Math.abs(e.clientX - startX) < 5) return;
+        if (!dragging) { dragging = true; seg.classList.add("is-dragging"); try { seg.setPointerCapture(pointer); } catch (err) { /* ignore */ } }
+        const box = seg.getBoundingClientRect();
+        const w = parseFloat(thumb.style.getPropertyValue("--tw")) || 60;
+        const x = Math.min(Math.max(e.clientX - box.left - grabOffset, 4), box.width - w - 4);
+        thumb.style.setProperty("--x", x + "px");
+        const target = nearest(x + w / 2);
+        thumb.style.setProperty("--tw", target.offsetWidth + "px");
+        buttons.forEach((b) => b.classList.toggle("is-near", b === target));
+      });
+      const end = (e) => {
+        if (e.pointerId !== pointer) return;
+        pointer = null;
+        if (!dragging) return;
+        const box = seg.getBoundingClientRect();
+        const x = parseFloat(thumb.style.getPropertyValue("--x")) + (parseFloat(thumb.style.getPropertyValue("--tw")) || 0) / 2;
+        const target = nearest(Math.max(0, Math.min(x, box.width)));
+        dragging = false; suppressClick = true;
+        seg.classList.remove("is-dragging");
+        buttons.forEach((b) => b.classList.remove("is-near"));
+        if (target.getAttribute("aria-pressed") !== "true") target.click();
+        placeThumbs();
+        setTimeout(() => { suppressClick = false; }, 0);
+      };
+      seg.addEventListener("pointerup", end);
+      seg.addEventListener("pointercancel", end);
+      seg.addEventListener("click", (e) => { if (suppressClick && e.isTrusted) { e.stopPropagation(); e.preventDefault(); } }, true);
+    });
+    window.addEventListener("resize", placeThumbs);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(placeThumbs);
   }
 
   // The hidden bottle is drawn into a canvas from a tiny copy of the photo, so the
@@ -451,6 +516,7 @@
     const bind = (attr, key) => document.querySelectorAll("[data-" + attr + "]").forEach((b) => b.addEventListener("click", () => {
       prefs[key] = b.dataset[attr]; store.set("prefs", prefs); newGame(true);
     }));
+    setupSegments();
     bind("mode", "mode"); bind("play", "play"); bind("gender", "gender");
     $("#hint-buttons").addEventListener("click", (e) => { const b = e.target.closest("[data-hint]"); if (b) useHint(b.dataset.hint); });
     $("#give-up").addEventListener("click", giveUp);

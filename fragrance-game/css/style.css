@@ -79,13 +79,33 @@ button, input, textarea { font: inherit; color: inherit; }
 }
 
 .settings { display: flex; flex-wrap: wrap; gap: 8px; flex: 1 1 100%; }
-.seg { display: inline-flex; background: var(--miss); border-radius: 999px; padding: 4px; }
-.seg button {
-  border: 0; background: none; cursor: pointer; border-radius: 999px;
-  padding: 7px 14px; font-size: 14px; font-weight: 500; color: var(--muted);
+.seg {
+  position: relative; display: inline-flex; background: var(--miss); border-radius: 999px; padding: 4px;
+  touch-action: pan-y; user-select: none; -webkit-user-select: none; cursor: grab;
 }
-.seg button:hover { color: var(--ink); }
-.seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14); }
+.seg.is-dragging { cursor: grabbing; }
+.seg button {
+  position: relative; z-index: 1; border: 0; background: none; cursor: inherit; border-radius: 999px;
+  padding: 7px 14px; font-size: 14px; font-weight: 500; color: var(--muted);
+  transition: color 200ms ease, transform 150ms ease;
+}
+.seg button:hover, .seg button[aria-pressed="true"] { color: var(--ink); }
+.seg button:active { transform: scale(0.94); }
+.seg.is-dragging button { color: var(--muted); }
+.seg.is-dragging button.is-near { color: var(--ink); }
+.seg__thumb {
+  position: absolute; z-index: 0; top: 4px; bottom: 4px; left: 0; width: 0; border-radius: 999px;
+  background: var(--surface); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14), 0 4px 12px -6px rgba(0, 0, 0, 0.25);
+  transform: translateX(var(--x, 0px)); width: var(--tw, 0px);
+  transition: transform 460ms cubic-bezier(.3, 1.45, .45, 1), width 460ms cubic-bezier(.3, 1.45, .45, 1), scale 200ms ease;
+  pointer-events: none;
+}
+.seg.is-dragging .seg__thumb { transition: width 200ms ease, scale 200ms ease; scale: 1.06 1.1; box-shadow: 0 6px 18px -6px rgba(0, 0, 0, 0.35); }
+.seg:not(.has-thumb) button[aria-pressed="true"] { background: var(--surface); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14); }
+
+/* Press feedback on every other button. */
+.btn, .chip, .theme { transition: transform 150ms ease, border-color 150ms ease, background 150ms ease; }
+.btn:active, .chip:active:not(:disabled), .theme:active { transform: scale(0.95); }
 
 /* ---------- board: one column on phones, three on wide screens ---------- */
 .board { display: flex; flex-direction: column; gap: 28px; }
