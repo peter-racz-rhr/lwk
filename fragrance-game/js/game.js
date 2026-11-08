@@ -397,7 +397,7 @@
     renderGuesses(animate);
     renderEnd();
     $("#round").textContent = game.daily ? "Daily · " + game.date : "Unlimited";
-    if (animate && game.over) $("#stage").scrollIntoView({ behavior: "smooth", block: "start" });
+    if (animate && game.over) $("#bottle").scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   // ---------- autocomplete ----------

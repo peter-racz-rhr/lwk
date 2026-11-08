@@ -27,31 +27,32 @@
 <div class="page">
   <header class="top">
     <h1>Blind Spritz</h1>
-    <span class="top__round" id="round"></span>
+    <nav class="settings" aria-label="Game settings">
+      <div class="seg" role="group" aria-label="Difficulty">
+        <button type="button" data-mode="easy" id="mode-easy">Easy</button>
+        <button type="button" data-mode="medium" id="mode-medium">Medium</button>
+        <button type="button" data-mode="hard" id="mode-hard">Hard</button>
+      </div>
+      <div class="seg" role="group" aria-label="Bottles for">
+        <button type="button" data-gender="all" id="g-all">All</button>
+        <button type="button" data-gender="Masculine" id="g-men">Men</button>
+        <button type="button" data-gender="Feminine" id="g-women">Women</button>
+        <button type="button" data-gender="Unisex" id="g-unisex">Unisex</button>
+      </div>
+      <div class="seg" role="group" aria-label="Round">
+        <button type="button" data-play="daily" id="play-daily">Daily</button>
+        <button type="button" data-play="unlimited" id="play-unlimited">Unlimited</button>
+      </div>
+    </nav>
+    <div class="top__meta">
+      <span class="top__round" id="round"></span>
+      <span class="blurb" id="mode-blurb"></span>
+    </div>
   </header>
 
-  <nav class="settings" aria-label="Game settings">
-    <div class="seg" role="group" aria-label="Difficulty">
-      <button type="button" data-mode="easy" id="mode-easy">Easy</button>
-      <button type="button" data-mode="medium" id="mode-medium">Medium</button>
-      <button type="button" data-mode="hard" id="mode-hard">Hard</button>
-    </div>
-    <div class="seg" role="group" aria-label="Bottles for">
-      <button type="button" data-gender="all" id="g-all">All</button>
-      <button type="button" data-gender="Masculine" id="g-men">Men</button>
-      <button type="button" data-gender="Feminine" id="g-women">Women</button>
-      <button type="button" data-gender="Unisex" id="g-unisex">Unisex</button>
-    </div>
-    <div class="seg" role="group" aria-label="Round">
-      <button type="button" data-play="daily" id="play-daily">Daily</button>
-      <button type="button" data-play="unlimited" id="play-unlimited">Unlimited</button>
-    </div>
-  </nav>
-  <p class="blurb" id="mode-blurb"></p>
-
-  <main>
-    <section class="stage" id="stage" aria-labelledby="stage-title">
-      <h2 class="sr" id="stage-title">The hidden fragrance</h2>
+  <main class="board">
+    <h2 class="sr">The hidden fragrance</h2>
+    <div class="col col--left">
       <figure class="bottle" id="bottle">
         <div class="bottle__frame" id="bottle-frame">
           <canvas id="bottle-blur" width="150" height="200" aria-label="Blurred bottle of the hidden fragrance" role="img"></canvas>
@@ -63,11 +64,19 @@
         </figcaption>
       </figure>
       <p class="facts" id="facts" hidden></p>
+      <div class="hints" id="hints">
+        <div class="row-head"><h2>Hints</h2><span id="hints-left"></span></div>
+        <ul class="hints-used" id="hints-used"></ul>
+        <div class="chips" id="hint-buttons"></div>
+      </div>
+    </div>
+
+    <div class="col col--mid">
       <div id="notes"></div>
       <p class="notes-count" id="notes-count"></p>
-    </section>
+    </div>
 
-    <section class="play" aria-label="Your guesses">
+    <div class="col col--right">
       <form class="ask" id="guess-form" autocomplete="off">
         <div class="combo">
           <input id="guess-input" type="text" placeholder="Search by name or brand" aria-label="Guess a fragrance" role="combobox"
@@ -77,17 +86,12 @@
         <button type="button" class="btn btn--plain" id="give-up">Give up</button>
       </form>
       <div class="result" id="result" hidden aria-live="polite"></div>
-
-      <div class="hints" id="hints">
-        <div class="row-head"><h2>Hints</h2><span id="hints-left"></span></div>
-        <ul class="hints-used" id="hints-used"></ul>
-        <div class="chips" id="hint-buttons"></div>
+      <div class="guess-block">
+        <div class="row-head"><h2>Guesses</h2><span id="guess-count"></span></div>
+        <p class="empty" id="guess-empty">Each guess is compared with the hidden bottle. Green is a match, yellow is close, and arrows point toward the answer.</p>
+        <ol class="guesses" id="guesses"></ol>
       </div>
-
-      <div class="row-head"><h2>Guesses</h2><span id="guess-count"></span></div>
-      <p class="empty" id="guess-empty">Each guess is compared with the hidden bottle. Green is a match, yellow is close, and arrows point toward the answer.</p>
-      <ol class="guesses" id="guesses"></ol>
-    </section>
+    </div>
   </main>
 
   <footer class="foot">
