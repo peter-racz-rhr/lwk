@@ -4,7 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>LOW NOON</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
   :root { --red: #e0603a; --blue: #4a8ae0; --sand: #f0d9a8; --ink: #1a120b; }
@@ -29,10 +28,18 @@
   .row { display: flex; gap: 12px; }
   .row > div { flex: 1; }
   input[type=range] { width: 100%; accent-color: #ffcf6e; }
-  #playBtn { margin-top: 20px; width: 100%; font: inherit; font-size: 18px; padding: 16px; cursor: pointer;
-    background: #e0603a; color: #fff; border: 4px solid #000; box-shadow: 4px 4px 0 #000; text-shadow: 2px 2px 0 #000; }
-  #playBtn:hover { background: #f07a4a; }
-  #playBtn:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #000; }
+  .bigbtn, .midbtn { font: inherit; cursor: pointer; color: #fff; border: 4px solid #000; box-shadow: 4px 4px 0 #000; text-shadow: 2px 2px 0 #000; }
+  .bigbtn { margin-top: 20px; width: 100%; font-size: 18px; padding: 16px; background: #e0603a; }
+  .bigbtn:hover { background: #f07a4a; }
+  .midbtn { font-size: 11px; padding: 12px 10px; background: #3a6aa8; }
+  .midbtn:hover { background: #4a80c8; }
+  .bigbtn:active, .midbtn:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #000; }
+  .mprow { display: flex; gap: 10px; margin-top: 12px; align-items: stretch; }
+  .mprow #hostBtn { flex: 1.2; }
+  .mprow #codeIn { width: 90px; flex: 0 0 90px; text-align: center; font-size: 14px; letter-spacing: 3px; text-transform: uppercase; }
+  .mprow #joinBtn { flex: 0.8; }
+  .mphelp { margin-top: 10px; font-size: 7px; color: #bba183; text-align: center; line-height: 1.6; }
+  #room { position: absolute; left: 12px; top: 244px; font-size: 9px; padding: 6px 8px; background: rgba(0,0,0,.6); border: 2px solid #ffcf6e; color: #ffcf6e; }
   .controls { margin-top: 18px; font-size: 8px; line-height: 2; color: #bba183; columns: 2; }
   .controls b { color: #ffcf6e; font-weight: normal; }
   #status { margin-top: 12px; font-size: 9px; color: #ff9a7a; text-align: center; min-height: 12px; }
@@ -131,6 +138,7 @@
 <div id="hud" class="hidden">
   <canvas id="radar" width="150" height="194"></canvas>
   <div id="sidebadge" class="shadow"></div>
+  <div id="room" class="shadow hidden"></div>
   <div id="topbar" class="shadow">
     <div id="scRed" class="score">0<small>RED</small></div>
     <div id="timer">1:40<small>ROUND 1</small></div>
@@ -157,7 +165,7 @@
   <div class="bm-foot"><span>Click to buy · weapons you survive with carry over · B / ESC to close</span><button id="bmClose">CLOSE</button></div>
 </div>
 
-<div id="pause" class="hidden shadow">CLICK TO CONTINUE<small>TAB = scoreboard · ESC = release mouse</small></div>
+<div id="pause" class="hidden shadow">CLICK TO CONTINUE<small>TAB = scoreboard · ESC = release mouse</small><small id="pauseRoom" style="color:#ffcf6e"></small></div>
 
 <div id="menu">
   <div class="panel">
@@ -179,7 +187,14 @@
       <div><label for="sensIn">MOUSE SENS <span id="sensVal">1.0</span></label><input id="sensIn" type="range" min="0.2" max="3" step="0.1" value="1"></div>
       <div><label for="volIn">VOLUME</label><input id="volIn" type="range" min="0" max="1" step="0.05" value="0.7"></div>
     </div>
-    <button id="playBtn">PLAY</button>
+    <button id="botsBtn" class="bigbtn">PLAY WITH BOTS</button>
+    <div class="mprow">
+      <button id="hostBtn" class="midbtn">HOST GAME</button>
+      <input id="codeIn" type="text" maxlength="4" placeholder="CODE" autocomplete="off">
+      <button id="joinBtn" class="midbtn">JOIN</button>
+    </div>
+    <button id="serverBtn" class="midbtn hidden" style="width:100%;margin-top:10px">PLAY ON THIS SERVER</button>
+    <div class="mphelp">HOST shows a 4-letter code · friends type it and press JOIN · bots fill empty slots</div>
     <div id="status"></div>
     <div class="controls">
       <b>WASD</b> move<br><b>MOUSE</b> aim / shoot<br><b>RMB</b> scope / lob nade<br><b>SPACE</b> jump<br><b>SHIFT</b> walk (quiet)<br><b>C</b> crouch<br>
@@ -188,6 +203,7 @@
   </div>
 </div>
 
-<script type="module" src="/client.js"></script>
+<script type="importmap">{ "imports": { "three": "./lib/three.module.js" } }</script>
+<script type="module" src="client.js"></script>
 </body>
 </html>

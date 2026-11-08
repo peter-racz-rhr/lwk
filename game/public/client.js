@@ -1,8 +1,9 @@
 // LOW NOON - browser client
-import * as THREE from '/lib/three.module.js';
-import { boxes, SITES, siteAt, PALMS, MAP_BOUNDS } from '/shared/map.js';
-import { moveBody, canStand, losClear, STAND_H, CROUCH_H } from '/shared/physics.js';
-import { WEAPONS, GEAR, MAX_HP, BUY_RADIUS } from '/shared/weapons.js';
+import * as THREE from 'three';
+import { boxes, SITES, siteAt, PALMS, MAP_BOUNDS } from '../shared/map.js';
+import { moveBody, canStand, losClear, STAND_H, CROUCH_H } from '../shared/physics.js';
+import { WEAPONS, GEAR, MAX_HP, BUY_RADIUS } from '../shared/weapons.js';
+import { createGame } from '../shared/core.js';
 
 // =====================================================================
 // settings
@@ -898,17 +899,107 @@ function flashHint(t) { hintMsg = t; hintT = 2; }
 // =====================================================================
 // networking
 // =====================================================================
-let ws = null;
-function net(m) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(m)); }
-function connect(onOpen) {
-  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-  ws = new WebSocket(`${proto}://${location.host}`);
-  ws.onopen = onOpen;
-  ws.onclose = () => {
-    if (inGame) { centerMsg('DISCONNECTED', 'refresh the page to rejoin', 999); }
-    $('status').textContent = 'Cannot reach server. Is it running?';
-  };
-  ws.onmessage = (ev) => { let m; try { m = JSON.parse(ev.data); } catch { return; } onMsg(m); };
+let conn = null, localGame = null, peer = null, roomCode = null;
+function net(m) { if (conn) conn.send(JSON.stringify(m)); }
+function handleRaw(s) { let m; try { m = JSON.parse(s); } catch { return; } onMsg(m); }
+function onDisconnect(why) {
+  if (inGame) centerMsg('DISCONNECTED', why || 'refresh the page to rejoin', 999);
+  $('status').textContent = why || 'Disconnected.';
+}
+
+// 1) dedicated Node server (WebSocket)
+function connectServer() {
+  return new Promise((res, rej) => {
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    const sock = new WebSocket(`${proto}://${location.host}`);
+    let open = false;
+    sock.onopen = () => { open = true; res({ send: (s) => { if (sock.readyState === 1) sock.send(s); } }); };
+    sock.onerror = () => { if (!open) rej(new Error('Cannot reach the server.')); };
+    sock.onclose = () => { if (open) onDisconnect(); };
+    sock.onmessage = (ev) => handleRaw(ev.data);
+  });
+}
+
+// 2) game runs inside this browser tab (bots / host)
+function connectLocal() {
+  localGame = createGame();
+  const h = localGame.attach({ send: (s) => queueMicrotask(() => handleRaw(s)) });
+  return { send: (s) => queueMicrotask(() => h.message(s)) };
+}
+
+// 3) peer-to-peer (WebRTC via PeerJS) for host / join
+const PEER_PREFIX = 'lownoon-ps2-';
+const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+const randomCode = () => Array.from({ length: 4 }, () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]).join('');
+function getPeerLib() {
+  if (window.__PEER) return Promise.resolve(window.__PEER);
+  if (window.peerjs) return Promise.resolve(window.peerjs.Peer);
+  return new Promise((res, rej) => {
+    const sc = document.createElement('script');
+    sc.src = 'peerjs/peerjs.min.js';
+    sc.onload = () => res(window.peerjs.Peer);
+    sc.onerror = () => rej(new Error('Could not load the online library.'));
+    document.head.appendChild(sc);
+  });
+}
+// optional custom broker: LOW-NOON.html?peerhost=192.168.1.5&peerport=9000
+const PEER_OPTS = (() => {
+  const q = new URLSearchParams(location.search);
+  const host = q.get('peerhost');
+  if (!host) return { debug: 0 };
+  return { debug: 0, host, port: Number(q.get('peerport')) || 9000, path: q.get('peerpath') || '/', secure: q.get('peersecure') === '1' };
+})();
+const dataToString = (d) => (typeof d === 'string' ? d : d instanceof ArrayBuffer ? new TextDecoder().decode(d) : String(d));
+
+async function startHost() {
+  const Peer = await getPeerLib();
+  return new Promise((res, rej) => {
+    const timer = setTimeout(() => rej(new Error('Online service did not answer. Check the internet, or play with bots.')), 15000);
+    const tryOpen = (attempt) => {
+      const code = randomCode();
+      const p = new Peer(PEER_PREFIX + code, PEER_OPTS);
+      let opened = false;
+      p.on('open', () => {
+        opened = true; clearTimeout(timer);
+        peer = p; roomCode = code;
+        res(connectLocal());
+      });
+      p.on('error', (err) => {
+        if (err.type === 'unavailable-id' && attempt < 5) { p.destroy(); tryOpen(attempt + 1); return; }
+        if (!opened) { clearTimeout(timer); rej(new Error('Hosting failed (' + err.type + '). Check the internet, or play with bots.')); }
+        else chatLine('Network: ' + err.type);
+      });
+      p.on('connection', (dc) => {
+        dc.on('open', () => {
+          if (!localGame) { dc.close(); return; }
+          const h = localGame.attach({ send: (s) => { if (dc.open) dc.send(s); } });
+          dc.on('data', (d) => h.message(dataToString(d)));
+          dc.on('close', () => h.close());
+          dc.on('error', () => h.close());
+        });
+      });
+      p.on('disconnected', () => { try { p.reconnect(); } catch { /* ignore */ } });
+    };
+    tryOpen(0);
+  });
+}
+
+async function startJoin(code) {
+  const Peer = await getPeerLib();
+  return new Promise((res, rej) => {
+    const p = new Peer(PEER_OPTS);
+    const timer = setTimeout(() => { p.destroy(); rej(new Error('Could not reach the host. Same code? Is the host still in the game?')); }, 15000);
+    p.on('error', (err) => {
+      clearTimeout(timer);
+      rej(new Error(err.type === 'peer-unavailable' ? `No game found with code ${code}.` : 'Online error (' + err.type + ').'));
+    });
+    p.on('open', () => {
+      const dc = p.connect(PEER_PREFIX + code, { serialization: 'raw', reliable: true });
+      dc.on('open', () => { clearTimeout(timer); peer = p; res({ send: (s) => { if (dc.open) dc.send(s); } }); });
+      dc.on('data', (d) => handleRaw(dataToString(d)));
+      dc.on('close', () => onDisconnect('The host left the game.'));
+    });
+  });
 }
 
 function onMsg(m) {
@@ -1600,29 +1691,58 @@ $('volIn').value = settings.vol;
 $('sensIn').addEventListener('input', () => { settings.sens = Number($('sensIn').value); $('sensVal').textContent = settings.sens.toFixed(1); saveSettings(); });
 $('volIn').addEventListener('input', () => { settings.vol = Number($('volIn').value); if (master) master.gain.value = settings.vol; saveSettings(); });
 $('resIn').addEventListener('change', () => { settings.res = Number($('resIn').value); resize(); saveSettings(); });
-$('nameIn').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('playBtn').click(); });
 $('bmClose').addEventListener('click', closeBuy);
 
-$('playBtn').addEventListener('click', () => {
+const STANDALONE = !!window.__STANDALONE || location.protocol === 'file:';
+if (!STANDALONE) $('serverBtn').classList.remove('hidden');
+$('codeIn').addEventListener('input', () => { $('codeIn').value = $('codeIn').value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4); });
+$('codeIn').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('joinBtn').click(); });
+
+let starting = false;
+async function play(mode) {
+  if (starting) return;
+  const code = $('codeIn').value.trim().toUpperCase();
+  if (mode === 'join' && code.length !== 4) { $('status').textContent = 'Type the 4-letter code from the host.'; $('codeIn').focus(); return; }
+  starting = true;
   settings.name = $('nameIn').value.trim().slice(0, 16) || 'Player' + Math.floor(Math.random() * 100);
   settings.team = $('teamIn').value;
   saveSettings();
   initAudio();
-  $('status').textContent = 'Connecting...';
+  $('status').textContent = mode === 'bots' ? 'Starting...' : 'Connecting...';
   canvas.requestPointerLock();
-  connect(() => {
-    net({ t: 'join', name: settings.name, team: settings.team });
-    inGame = true;
-    $('menu').classList.add('hidden');
-    $('hud').classList.remove('hidden');
-    $('status').textContent = '';
-    if (!locked) $('pause').classList.remove('hidden');
-  });
-});
+  try {
+    if (mode === 'bots') conn = connectLocal();
+    else if (mode === 'host') conn = await startHost();
+    else if (mode === 'join') conn = await startJoin(code);
+    else conn = await connectServer();
+  } catch (e) {
+    $('status').textContent = e.message;
+    starting = false;
+    if (document.pointerLockElement) document.exitPointerLock();
+    return;
+  }
+  net({ t: 'join', name: settings.name, team: settings.team });
+  inGame = true;
+  $('menu').classList.add('hidden');
+  $('hud').classList.remove('hidden');
+  $('status').textContent = '';
+  if (roomCode) {
+    $('room').textContent = `ROOM CODE: ${roomCode}`;
+    $('room').classList.remove('hidden');
+    $('pauseRoom').textContent = `Room code for friends: ${roomCode}`;
+    chatLine(`Your room code is ${roomCode} - friends open the game, type it and press JOIN`);
+  }
+  if (!locked) $('pause').classList.remove('hidden');
+}
+$('botsBtn').addEventListener('click', () => play('bots'));
+$('hostBtn').addEventListener('click', () => play('host'));
+$('joinBtn').addEventListener('click', () => play('join'));
+$('serverBtn').addEventListener('click', () => play('server'));
+$('nameIn').addEventListener('keydown', (e) => { if (e.key === 'Enter') play(STANDALONE ? 'bots' : 'server'); });
 
 // debug hook for automated tests
 window.__lownoon = {
   me, remotes, camera, get G() { return G; },
   fire: () => fire(performance.now() / 1000), setLocked: (v) => { locked = v; },
-  buy: (item) => net({ t: 'buy', item }), throwNade, switchWeapon, openBuy,
+  buy: (item) => net({ t: 'buy', item }), throwNade, switchWeapon, openBuy, get localGame() { return localGame; },
 };

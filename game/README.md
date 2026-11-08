@@ -46,7 +46,22 @@ Empty slots are filled with **bots** that buy, carry the bomb, plant and defuse,
 
 Tips: shoot while standing still (moving = inaccurate), tap or burst instead of spraying, and aim for the head (rifle one-shots heads).
 
-## Run it
+## Easiest: the single HTML file
+
+**`dist/LOW-NOON.html`** is the whole game in one file. Copy it to any computer and double-click it.
+
+- **PLAY WITH BOTS** works completely offline.
+- **HOST GAME**: your browser runs the match and shows a 4-letter room code (top-left).
+- **JOIN**: friends open the same file, type the code and press JOIN. Bots fill the empty slots.
+
+Host/Join connect the browsers directly (WebRTC). It needs internet for the first handshake
+(the free public PeerJS service), and some school or company networks block it. If joining fails,
+use the Node server below.
+Keep the host's game tab in front: browsers slow down background tabs.
+
+Rebuild the file after changing the code: `npm install && npm run build`.
+
+## Run the server version
 
 You need [Node.js](https://nodejs.org) 18 or newer.
 
@@ -72,7 +87,9 @@ Run `npm start` on one computer. It prints a line like
 The free Render plan goes to sleep when nobody uses it. The first visit can take about 30-50 seconds to wake up, so open it a few minutes before class.
 
 ## Files
-- `server.js`: web server plus game logic (rounds, bomb, bots, hit validation)
+- `server.js`: web server that connects players to the game core over WebSockets
+- `shared/core.js`: game logic (rounds, economy, bomb, grenades, bots); runs on the server or in the host's browser
+- `build/build.mjs`: bundles everything into `dist/LOW-NOON.html`
 - `public/index.html`: menu + HUD
 - `public/client.js`: 3D rendering (Three.js), PS2 effects, movement, shooting, sound
 - `shared/`: map, physics and weapon stats used by both client and server
