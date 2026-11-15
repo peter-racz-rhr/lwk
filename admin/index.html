@@ -1,0 +1,473 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Portfolio Admin</title>
+<style>
+:root{
+  --bg:#f6f7f9;--panel:#ffffff;--text:#16181d;--muted:#667085;--line:#e4e7ec;
+  --accent:#4f46e5;--accent-ink:#ffffff;--danger:#d92d20;--ok:#079455;--side:#111827;--side-text:#e5e7eb;
+  --radius:12px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0b0d12;--panel:#151821;--text:#e8eaf0;--muted:#98a2b3;--line:#262b36;
+    --accent:#818cf8;--accent-ink:#0b0d12;--danger:#f97066;--ok:#47cd89;--side:#07080c;--side-text:#d0d5dd;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0b0d12;--panel:#151821;--text:#e8eaf0;--muted:#98a2b3;--line:#262b36;
+  --accent:#818cf8;--accent-ink:#0b0d12;--danger:#f97066;--ok:#47cd89;--side:#07080c;--side-text:#d0d5dd;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+button,input,textarea,select{font:inherit;color:inherit}
+.hidden{display:none!important}
+
+/* login */
+#login{min-height:100%;display:grid;place-items:center;padding:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:28px;width:100%;max-width:380px}
+.card h1{margin:0 0 4px;font-size:22px}
+.card p{margin:0 0 20px;color:var(--muted);font-size:14px}
+
+/* layout */
+#app{display:grid;grid-template-columns:240px 1fr;min-height:100%}
+aside{background:var(--side);color:var(--side-text);padding:20px 14px;display:flex;flex-direction:column;gap:4px}
+aside .brand{font-weight:700;font-size:17px;padding:4px 10px 18px}
+aside button{background:none;border:0;text-align:left;padding:9px 12px;border-radius:8px;cursor:pointer;color:var(--side-text);opacity:.8}
+aside button:hover{background:rgba(255,255,255,.06);opacity:1}
+aside button.active{background:rgba(255,255,255,.12);opacity:1;font-weight:600}
+aside .spacer{flex:1}
+main{padding:28px;max-width:960px;width:100%}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+.top h2{margin:0;font-size:22px}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;margin-bottom:16px}
+label{display:block;font-size:13px;font-weight:600;margin:0 0 6px}
+.field{margin-bottom:14px}
+input[type=text],input[type=email],input[type=url],input[type=password],textarea,select{
+  width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);outline:none}
+input:focus,textarea:focus{border-color:var(--accent)}
+textarea{min-height:110px;resize:vertical}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+
+.btn{text-decoration:none;display:inline-block;border:1px solid var(--line);background:var(--panel);padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:500}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.danger{color:var(--danger)}
+.btn.sm{padding:5px 10px;font-size:13px}
+.btn.block{width:100%}
+
+.item{border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:12px}
+.item-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px}
+.item-head strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:4px 6px 4px 12px;font-size:14px}
+.chip button{border:0;background:none;cursor:pointer;color:var(--muted);font-size:16px;line-height:1;padding:0 4px}
+.row{display:flex;gap:8px}
+.row input{flex:1}
+
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+.stat .n{font-size:26px;font-weight:700}
+.stat .l{color:var(--muted);font-size:13px}
+.muted{color:var(--muted);font-size:13px}
+.err{color:var(--danger);font-size:13px;min-height:18px;margin-top:8px}
+
+.msg{border-bottom:1px solid var(--line);padding:12px 0}
+.msg:last-child{border-bottom:0}
+.msg .meta{color:var(--muted);font-size:13px}
+
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none}
+#toast.show{opacity:1}
+
+pre{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;overflow:auto;font-size:12px;max-height:420px}
+
+@media (max-width:760px){
+  #app{grid-template-columns:1fr}
+  aside{flex-direction:row;overflow-x:auto;padding:10px 16px;gap:2px}
+  aside .brand,aside .spacer{display:none}
+  aside button{white-space:nowrap}
+  main{padding:20px 16px}
+  .grid2,.stats{grid-template-columns:1fr 1fr}
+}
+@media (max-width:480px){.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<section id="login">
+  <form class="card" id="loginForm">
+    <h1>Admin</h1>
+    <p id="loginHint">Sign in to manage your portfolio.</p>
+    <div class="field">
+      <label for="pw">Password</label>
+      <input type="password" id="pw" autocomplete="current-password" required>
+    </div>
+    <div class="field hidden" id="pw2Wrap">
+      <label for="pw2">Confirm password</label>
+      <input type="password" id="pw2" autocomplete="new-password">
+    </div>
+    <button class="btn primary block" type="submit" id="loginBtn">Sign in</button>
+    <div class="err" id="loginErr"></div>
+  </form>
+</section>
+
+<!-- APP -->
+<div id="app" class="hidden">
+  <aside>
+    <div class="brand">Portfolio Admin</div>
+    <button data-view="dashboard" class="active">Dashboard</button>
+    <button data-view="about">About</button>
+    <button data-view="skills">Skills</button>
+    <button data-view="projects">Projects</button>
+    <button data-view="experience">Experience</button>
+    <button data-view="contact">Contact &amp; Socials</button>
+    <button data-view="messages">Messages</button>
+    <button data-view="data">Import / Export</button>
+    <div class="spacer"></div>
+    <button id="themeBtn">Toggle theme</button>
+    <button id="logoutBtn">Log out</button>
+  </aside>
+  <main>
+    <div class="top">
+      <h2 id="viewTitle">Dashboard</h2>
+      <div class="actions">
+        <a class="btn" href="https://portfoliopeter.netlify.app/about/" target="_blank" rel="noopener">View site ↗</a>
+        <button class="btn primary" id="saveBtn">Save changes</button>
+      </div>
+    </div>
+    <div id="view"></div>
+  </main>
+</div>
+
+<div id="toast"></div>
+
+<script>
+(function(){
+  var STORE_KEY = 'portfolio-admin-content';
+  var PW_KEY = 'portfolio-admin-pw';
+  var SESSION_KEY = 'portfolio-admin-session';
+
+  function safeGet(store, k){ try { return store.getItem(k); } catch(e){ return null; } }
+  function safeSet(store, k, v){ try { store.setItem(k, v); return true; } catch(e){ return false; } }
+  function safeDel(store, k){ try { store.removeItem(k); } catch(e){} }
+
+  var DEFAULTS = {
+    about: {
+      name: 'Peter Racz',
+      title: 'Developer & Designer',
+      location: '',
+      photo: '',
+      bio: 'Write a short introduction about yourself here.',
+      cv: ''
+    },
+    skills: ['HTML', 'CSS', 'JavaScript'],
+    projects: [
+      { title: 'Example project', description: 'What it is and what you did.', tech: 'HTML, CSS, JS', url: '', repo: '', image: '', featured: true }
+    ],
+    experience: [
+      { role: 'Your role', company: 'Company / School', period: '2024 – now', description: '' }
+    ],
+    contact: { email: '', phone: '', github: 'https://github.com/peter-racz-rhr', linkedin: '', instagram: '', website: 'https://portfoliopeter.netlify.app' },
+    messages: []
+  };
+
+  var data = load();
+  var dirty = false;
+  var current = 'dashboard';
+
+  function clone(o){ return JSON.parse(JSON.stringify(o)); }
+  function load(){
+    var raw = safeGet(localStorage, STORE_KEY);
+    if (!raw) return clone(DEFAULTS);
+    try {
+      var d = JSON.parse(raw);
+      Object.keys(DEFAULTS).forEach(function(k){ if (d[k] === undefined) d[k] = clone(DEFAULTS[k]); });
+      return d;
+    } catch(e){ return clone(DEFAULTS); }
+  }
+  function save(){
+    if (safeSet(localStorage, STORE_KEY, JSON.stringify(data))) { dirty = false; toast('Saved'); }
+    else toast('Could not save (browser storage blocked) – use Export');
+  }
+  function mark(){ dirty = true; }
+
+  function toast(t){
+    var el = document.getElementById('toast');
+    el.textContent = t; el.classList.add('show');
+    clearTimeout(toast._t); toast._t = setTimeout(function(){ el.classList.remove('show'); }, 1800);
+  }
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+
+  /* ---------- auth (client-side only) ---------- */
+  async function hash(s){
+    if (window.crypto && crypto.subtle) {
+      var buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('pf-admin:' + s));
+      return Array.from(new Uint8Array(buf)).map(function(b){ return b.toString(16).padStart(2,'0'); }).join('');
+    }
+    return 'plain:' + s;
+  }
+  var storedPw = safeGet(localStorage, PW_KEY);
+  var firstRun = !storedPw;
+  if (firstRun) {
+    document.getElementById('loginHint').textContent = 'First visit: choose an admin password for this browser.';
+    document.getElementById('pw2Wrap').classList.remove('hidden');
+    document.getElementById('loginBtn').textContent = 'Set password';
+  }
+  if (safeGet(sessionStorage, SESSION_KEY) === '1' && !firstRun) enter();
+
+  document.getElementById('loginForm').addEventListener('submit', async function(e){
+    e.preventDefault();
+    var pw = document.getElementById('pw').value;
+    var err = document.getElementById('loginErr');
+    err.textContent = '';
+    if (firstRun) {
+      if (pw.length < 6) { err.textContent = 'Use at least 6 characters.'; return; }
+      if (pw !== document.getElementById('pw2').value) { err.textContent = 'Passwords do not match.'; return; }
+      safeSet(localStorage, PW_KEY, await hash(pw));
+      firstRun = false;
+    } else if (await hash(pw) !== storedPw) {
+      err.textContent = 'Wrong password.'; return;
+    }
+    safeSet(sessionStorage, SESSION_KEY, '1');
+    enter();
+  });
+
+  function enter(){
+    document.getElementById('login').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    render();
+  }
+
+  document.getElementById('logoutBtn').addEventListener('click', function(){
+    if (dirty && !confirm('You have unsaved changes. Log out anyway?')) return;
+    safeDel(sessionStorage, SESSION_KEY);
+    location.reload();
+  });
+  document.getElementById('themeBtn').addEventListener('click', function(){
+    var r = document.documentElement;
+    var dark = r.dataset.theme ? r.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+    r.dataset.theme = dark ? 'light' : 'dark';
+  });
+  document.getElementById('saveBtn').addEventListener('click', save);
+  window.addEventListener('beforeunload', function(e){ if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+
+  document.querySelectorAll('aside [data-view]').forEach(function(b){
+    b.addEventListener('click', function(){
+      current = b.dataset.view;
+      document.querySelectorAll('aside [data-view]').forEach(function(x){ x.classList.toggle('active', x === b); });
+      render();
+    });
+  });
+
+  /* ---------- views ---------- */
+  var TITLES = { dashboard:'Dashboard', about:'About', skills:'Skills', projects:'Projects', experience:'Experience', contact:'Contact & Socials', messages:'Messages', data:'Import / Export' };
+
+  function input(label, path, val, type){
+    return '<div class="field"><label>' + esc(label) + '</label><input type="' + (type||'text') + '" data-path="' + path + '" value="' + esc(val) + '"></div>';
+  }
+  function area(label, path, val){
+    return '<div class="field"><label>' + esc(label) + '</label><textarea data-path="' + path + '">' + esc(val) + '</textarea></div>';
+  }
+
+  function render(){
+    document.getElementById('viewTitle').textContent = TITLES[current];
+    var v = document.getElementById('view');
+    v.innerHTML = VIEWS[current]();
+    bind(v);
+  }
+
+  var VIEWS = {
+    dashboard: function(){
+      var unread = data.messages.filter(function(m){ return !m.read; }).length;
+      return '<div class="stats">' +
+        stat(data.projects.length, 'Projects') + stat(data.skills.length, 'Skills') +
+        stat(data.experience.length, 'Experience entries') + stat(unread, 'Unread messages') +
+      '</div>' +
+      '<div class="panel"><strong>' + esc(data.about.name) + '</strong> · <span class="muted">' + esc(data.about.title) + '</span>' +
+      '<p style="margin:10px 0 0">' + esc(data.about.bio) + '</p></div>' +
+      '<div class="panel"><strong>Quick start</strong><ol class="muted" style="margin:8px 0 0;padding-left:18px">' +
+        '<li>Edit your About, Skills, Projects and Experience.</li>' +
+        '<li>Click <b>Save changes</b> (saved in this browser).</li>' +
+        '<li>Go to <b>Import / Export</b> and download <code>content.json</code> for the live site to use.</li>' +
+      '</ol></div>';
+    },
+    about: function(){
+      var a = data.about;
+      return '<div class="panel"><div class="grid2">' +
+        input('Full name', 'about.name', a.name) + input('Title / tagline', 'about.title', a.title) +
+        input('Location', 'about.location', a.location) + input('Profile photo URL', 'about.photo', a.photo, 'url') +
+      '</div>' + area('Bio', 'about.bio', a.bio) + input('CV / résumé URL', 'about.cv', a.cv, 'url') +
+      (a.photo ? '<img src="' + esc(a.photo) + '" alt="Profile photo preview" style="width:96px;height:96px;object-fit:cover;border-radius:50%;border:1px solid var(--line)">' : '') +
+      '</div>';
+    },
+    skills: function(){
+      return '<div class="panel"><label>Add a skill</label><div class="row"><input type="text" id="skillIn" placeholder="e.g. React"><button class="btn primary" id="skillAdd">Add</button></div>' +
+        '<div class="chips">' + data.skills.map(function(s, i){
+          return '<span class="chip">' + esc(s) + '<button aria-label="Remove ' + esc(s) + '" data-del-skill="' + i + '">×</button></span>';
+        }).join('') + '</div></div>';
+    },
+    projects: function(){
+      return '<div class="actions" style="margin-bottom:12px"><button class="btn primary" data-add="projects">+ Add project</button></div>' +
+        (data.projects.length ? '' : '<p class="muted">No projects yet.</p>') +
+        data.projects.map(function(p, i){
+          var b = 'projects.' + i + '.';
+          return '<div class="item"><div class="item-head"><strong>' + esc(p.title || 'Untitled') + '</strong>' + itemBtns('projects', i) + '</div>' +
+            '<div class="grid2">' + input('Title', b+'title', p.title) + input('Technologies', b+'tech', p.tech) +
+            input('Live URL', b+'url', p.url, 'url') + input('Repository URL', b+'repo', p.repo, 'url') + '</div>' +
+            input('Image URL', b+'image', p.image, 'url') + area('Description', b+'description', p.description) +
+            '<label style="display:flex;gap:8px;align-items:center;font-weight:500"><input type="checkbox" data-path="' + b + 'featured"' + (p.featured ? ' checked' : '') + '> Featured</label></div>';
+        }).join('');
+    },
+    experience: function(){
+      return '<div class="actions" style="margin-bottom:12px"><button class="btn primary" data-add="experience">+ Add entry</button></div>' +
+        (data.experience.length ? '' : '<p class="muted">No entries yet.</p>') +
+        data.experience.map(function(x, i){
+          var b = 'experience.' + i + '.';
+          return '<div class="item"><div class="item-head"><strong>' + esc(x.role || 'Untitled') + '</strong>' + itemBtns('experience', i) + '</div>' +
+            '<div class="grid2">' + input('Role', b+'role', x.role) + input('Company / School', b+'company', x.company) + '</div>' +
+            input('Period', b+'period', x.period) + area('Description', b+'description', x.description) + '</div>';
+        }).join('');
+    },
+    contact: function(){
+      var c = data.contact;
+      return '<div class="panel"><div class="grid2">' +
+        input('Email', 'contact.email', c.email, 'email') + input('Phone', 'contact.phone', c.phone) +
+        input('GitHub', 'contact.github', c.github, 'url') + input('LinkedIn', 'contact.linkedin', c.linkedin, 'url') +
+        input('Instagram', 'contact.instagram', c.instagram, 'url') + input('Website', 'contact.website', c.website, 'url') +
+      '</div></div>';
+    },
+    messages: function(){
+      return '<div class="panel">' +
+        '<p class="muted" style="margin-top:0">Paste contact-form submissions here, for example from Netlify Forms, to keep track of them.</p>' +
+        '<div class="grid2"><input type="text" id="mName" placeholder="Name"><input type="email" id="mEmail" placeholder="Email"></div>' +
+        '<textarea id="mBody" placeholder="Message" style="margin-top:10px;min-height:70px"></textarea>' +
+        '<div class="actions" style="margin-top:10px"><button class="btn primary" id="mAdd">Add message</button></div></div>' +
+        '<div class="panel">' + (data.messages.length ? data.messages.map(function(m, i){
+          return '<div class="msg"><div class="item-head"><div><strong>' + esc(m.name) + '</strong> <span class="meta">' + esc(m.email) + ' · ' + esc(m.date) + '</span></div>' +
+            '<div class="actions"><button class="btn sm" data-read="' + i + '">' + (m.read ? 'Mark unread' : 'Mark read') + '</button>' +
+            '<button class="btn sm danger" data-del="messages" data-i="' + i + '">Delete</button></div></div>' +
+            '<div style="' + (m.read ? 'opacity:.6' : '') + '">' + esc(m.body) + '</div></div>';
+        }).join('') : '<p class="muted" style="margin:0">No messages.</p>') + '</div>';
+    },
+    data: function(){
+      return '<div class="panel"><strong>Export</strong><p class="muted">Download all content as <code>content.json</code>. Put it in your site\'s repo so the live pages can read it.</p>' +
+        '<button class="btn primary" id="exportBtn">Download content.json</button></div>' +
+        '<div class="panel"><strong>Import</strong><p class="muted">Load a previously exported file. This replaces the current content.</p>' +
+        '<input type="file" id="importIn" accept="application/json,.json"></div>' +
+        '<div class="panel"><strong>Reset</strong><p class="muted">Restore the default sample content.</p>' +
+        '<button class="btn danger" id="resetBtn">Reset content</button> <button class="btn danger" id="resetPwBtn">Reset admin password</button></div>' +
+        '<div class="panel"><strong>Preview</strong><pre>' + esc(JSON.stringify(data, null, 2)) + '</pre></div>';
+    }
+  };
+
+  function stat(n, l){ return '<div class="stat"><div class="n">' + n + '</div><div class="l">' + l + '</div></div>'; }
+  function itemBtns(list, i){
+    return '<div class="actions"><button class="btn sm" data-move="' + list + '" data-i="' + i + '" data-dir="-1" aria-label="Move up">↑</button>' +
+      '<button class="btn sm" data-move="' + list + '" data-i="' + i + '" data-dir="1" aria-label="Move down">↓</button>' +
+      '<button class="btn sm danger" data-del="' + list + '" data-i="' + i + '">Delete</button></div>';
+  }
+
+  function setPath(path, value){
+    var parts = path.split('.'), o = data;
+    for (var i = 0; i < parts.length - 1; i++) o = o[parts[i]];
+    o[parts[parts.length - 1]] = value;
+  }
+
+  function bind(v){
+    v.querySelectorAll('[data-path]').forEach(function(el){
+      el.addEventListener('input', function(){
+        setPath(el.dataset.path, el.type === 'checkbox' ? el.checked : el.value);
+        mark();
+        var head = el.closest('.item');
+        if (head && /\.(title|role)$/.test(el.dataset.path)) head.querySelector('.item-head strong').textContent = el.value || 'Untitled';
+      });
+      if (el.type === 'checkbox') el.addEventListener('change', function(){ setPath(el.dataset.path, el.checked); mark(); });
+    });
+
+    v.querySelectorAll('[data-add]').forEach(function(b){
+      b.addEventListener('click', function(){
+        var tpl = b.dataset.add === 'projects'
+          ? { title:'', description:'', tech:'', url:'', repo:'', image:'', featured:false }
+          : { role:'', company:'', period:'', description:'' };
+        data[b.dataset.add].unshift(tpl); mark(); render();
+      });
+    });
+    v.querySelectorAll('[data-del]').forEach(function(b){
+      b.addEventListener('click', function(){
+        if (!confirm('Delete this item?')) return;
+        data[b.dataset.del].splice(+b.dataset.i, 1); mark(); render();
+      });
+    });
+    v.querySelectorAll('[data-move]').forEach(function(b){
+      b.addEventListener('click', function(){
+        var arr = data[b.dataset.move], i = +b.dataset.i, j = i + (+b.dataset.dir);
+        if (j < 0 || j >= arr.length) return;
+        var t = arr[i]; arr[i] = arr[j]; arr[j] = t; mark(); render();
+      });
+    });
+
+    var skillIn = v.querySelector('#skillIn');
+    if (skillIn) {
+      var add = function(){
+        var s = skillIn.value.trim();
+        if (s && data.skills.indexOf(s) === -1) { data.skills.push(s); mark(); render(); v.querySelector('#skillIn').focus(); }
+      };
+      v.querySelector('#skillAdd').addEventListener('click', add);
+      skillIn.addEventListener('keydown', function(e){ if (e.key === 'Enter') { e.preventDefault(); add(); } });
+      v.querySelectorAll('[data-del-skill]').forEach(function(b){
+        b.addEventListener('click', function(){ data.skills.splice(+b.dataset.delSkill, 1); mark(); render(); });
+      });
+    }
+
+    var mAdd = v.querySelector('#mAdd');
+    if (mAdd) mAdd.addEventListener('click', function(){
+      var body = v.querySelector('#mBody').value.trim();
+      if (!body) return;
+      data.messages.unshift({ name: v.querySelector('#mName').value.trim() || 'Anonymous', email: v.querySelector('#mEmail').value.trim(), body: body, date: new Date().toLocaleDateString(), read: false });
+      mark(); render();
+    });
+    v.querySelectorAll('[data-read]').forEach(function(b){
+      b.addEventListener('click', function(){ var m = data.messages[+b.dataset.read]; m.read = !m.read; mark(); render(); });
+    });
+
+    var ex = v.querySelector('#exportBtn');
+    if (ex) ex.addEventListener('click', function(){
+      var out = clone(data); delete out.messages;
+      var blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob); a.download = 'content.json'; a.click();
+      setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
+    });
+    var im = v.querySelector('#importIn');
+    if (im) im.addEventListener('change', function(){
+      var f = im.files[0]; if (!f) return;
+      f.text().then(function(t){
+        try {
+          var d = JSON.parse(t);
+          Object.keys(DEFAULTS).forEach(function(k){ if (d[k] === undefined) d[k] = k === 'messages' ? data.messages : clone(DEFAULTS[k]); });
+          data = d; mark(); render(); toast('Imported – click Save to keep it');
+        } catch(e){ toast('That file is not valid JSON'); }
+      });
+    });
+    var rs = v.querySelector('#resetBtn');
+    if (rs) rs.addEventListener('click', function(){
+      if (!confirm('Replace all content with the defaults?')) return;
+      data = clone(DEFAULTS); mark(); render();
+    });
+    var rp = v.querySelector('#resetPwBtn');
+    if (rp) rp.addEventListener('click', function(){
+      if (!confirm('Remove the admin password? You will set a new one next time.')) return;
+      safeDel(localStorage, PW_KEY); safeDel(sessionStorage, SESSION_KEY); location.reload();
+    });
+  }
+})();
+</script>
+</body>
+</html>
