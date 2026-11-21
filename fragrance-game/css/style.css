@@ -298,6 +298,21 @@ figcaption:has(.bottle__name:empty) { display: none; }
 .foot { border-top: 1px solid var(--line); padding-top: 16px; font-size: 12px; color: var(--faint); }
 .foot p { margin: 0; max-width: 62ch; }
 
+/* Desktop: long note lists shrink step by step so the pyramid fits the screen (set by fitNotes() in game.js). */
+@media (min-width: 760px) {
+  #notes.fit-1 { gap: 16px; }
+  #notes.fit-1 .bar { padding: 4px 12px; font-size: 13px; }
+  #notes.fit-1 .tier h3 { font-size: 22px; }
+  #notes.fit-2 { gap: 12px; }
+  #notes.fit-2 .bars { gap: 2px; }
+  #notes.fit-2 .bar { padding: 2px 10px; font-size: 12px; line-height: 1.3; }
+  #notes.fit-2 .bar--shared { padding-left: 32px; }
+  #notes.fit-2 .bar--shared::before { width: 16px; height: 16px; font-size: 9px; }
+  #notes.fit-2 .tier h3 { font-size: 20px; }
+  #notes.fit-3 .bars { grid-template-columns: 1fr 1fr; column-gap: 4px; }
+  #notes.fit-3 .bar { width: 100%; min-width: 0; }
+}
+
 /* ---------- phone app layout: everything on one screen, no page scroll ---------- */
 .mobile-only, .sheet__head, .sheet__blurb { display: none; }
 .pager { display: none; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }

@@ -323,7 +323,7 @@
       seg.addEventListener("pointercancel", end);
       seg.addEventListener("click", (e) => { if (suppressClick && e.isTrusted) { e.stopPropagation(); e.preventDefault(); } }, true);
     });
-    window.addEventListener("resize", placeThumbs);
+    window.addEventListener("resize", () => { placeThumbs(); if (game) fitNotes(); });
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(placeThumbs);
   }
 
@@ -424,6 +424,17 @@
     $("#facts").hidden = !facts.length;
   }
 
+  // Desktop: if the note pyramid would run past the bottom of the screen, step down to
+  // tighter bar sizes (and finally two bars per row) until it fits.
+  function fitNotes() {
+    const notes = $("#notes"), col = document.querySelector(".col--mid");
+    notes.classList.remove("fit-1", "fit-2", "fit-3");
+    if (phone()) return;
+    // Measured in page coordinates, so it works the same whether or not the page is scrolled.
+    const fits = () => col.getBoundingClientRect().bottom + window.scrollY <= window.innerHeight - 24;
+    for (let level = 1; level <= 3 && !fits(); level++) notes.classList.add("fit-" + level);
+  }
+
   function renderHints() {
     const m = MODES[game.mode];
     const left = m.hints - game.hints.length;
@@ -510,6 +521,7 @@
     renderControls();
     renderBottle(animate);
     renderNotes();
+    fitNotes();
     renderHints();
     renderGuesses(animate);
     renderEnd();
