@@ -10,7 +10,7 @@
   --surface: #ffffff;
   --ink: #151515;
   --muted: #6c6c68;
-  --faint: #74746f;
+  --faint: #6c6c67;
   --line: #e2e1dc;
   --hit: #2f7d4f;
   --hit-ink: #ffffff;
@@ -86,12 +86,12 @@ button, input, textarea { font: inherit; color: inherit; }
 .seg.is-dragging { cursor: grabbing; }
 .seg button {
   position: relative; z-index: 1; border: 0; background: none; cursor: inherit; border-radius: 999px;
-  padding: 7px 14px; font-size: 14px; font-weight: 500; color: var(--muted);
+  padding: 7px 14px; font-size: 14px; font-weight: 500; color: var(--miss-ink);
   transition: color 200ms ease, transform 150ms ease;
 }
 .seg button:hover, .seg button[aria-pressed="true"] { color: var(--ink); }
 .seg button:active { transform: scale(0.94); }
-.seg.is-dragging button { color: var(--muted); }
+.seg.is-dragging button { color: var(--miss-ink); }
 .seg.is-dragging button.is-near { color: var(--ink); }
 .seg__thumb {
   position: absolute; z-index: 0; top: 4px; bottom: 4px; left: 0; width: 0; border-radius: 999px;
