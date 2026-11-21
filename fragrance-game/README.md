@@ -56,7 +56,7 @@ Before making the site public:
 2. **Get Fragrantica's permission, or replace their content.** The notes, ratings and votes are a copy of Fragrantica's database, and the bottle photos are hotlinked from their image server. In the EU a database like that is protected by the sui generis database right, and product photos by copyright. A free fan game lowers the risk but does not remove it. Write to Fragrantica and ask; if they say no, swap the photos for ones you are licensed to use and rebuild the data from a source you may use.
 3. **Have the legal pages checked** by a lawyer for your country. They are a starting point drafted from how the site actually works, not legal advice.
 4. If you mainly target Hungarian players, add Hungarian versions of the three legal pages.
-5. Once the domain is fixed, add `<link rel="canonical">`, make the `og:image` URL absolute, and add `sitemap.xml`.
+5. The canonical links, sitemap and preview image use https://scentle.peter-racz-rhr.workers.dev/. If you move to your own domain, replace that address in the HTML files, `sitemap.xml` and `robots.txt`.
 
 ## Security
 
