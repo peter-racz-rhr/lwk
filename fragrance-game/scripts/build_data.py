@@ -24,6 +24,12 @@ BRAND_NAMES = {
     "Mugler": "Mugler", "Jo-Malone-London": "Jo Malone", "Narciso-Rodriguez": "Narciso Rodriguez",
 }
 YEAR_FIX = {6472: 2009}  # Black Afgano has no year in the dataset
+# Spelling variants in the source that would stop the same note matching across bottles.
+NOTE_FIX = {
+    "vanille": "vanilla", "vanila": "vanilla", "woodsy notes": "woody notes", "virginian cedar": "virginia cedar",
+    "oak moss": "oakmoss", "hiacynth": "hyacinth", "rhuburb": "rhubarb", "civetta": "civet", "cloves": "clove",
+    "myrhh": "myrrh", "pitosporum": "pittosporum",
+}
 
 
 def norm(s):
@@ -42,7 +48,14 @@ def clean_name(raw, brand_slug):
 
 
 def notes(s):
-    return [x.strip() for x in s.split(",") if x.strip() and x.strip() != "unknown"]
+    if isinstance(s, str):
+        s = s.split(",")
+    out = []
+    for x in s:
+        x = NOTE_FIX.get(x.strip(), x.strip())
+        if x and x != "unknown" and x not in out:
+            out.append(x)
+    return out
 
 
 def main(cleaned, perfumes):
@@ -77,6 +90,14 @@ def main(cleaned, perfumes):
         seen.add(fid)
         if len(out) == LIMIT:
             break
+    # Pyramids Fragrantica has updated since the snapshot (data/overrides.json).
+    overrides = json.loads((Path(__file__).resolve().parent.parent / "data" / "overrides.json").read_text(encoding="utf-8"))
+    for f in out:
+        o = overrides.get(str(f["id"]))
+        if o:
+            for tier in ("top", "heart", "base"):
+                if tier in o:
+                    f[tier] = notes(o[tier])
     # Same name and brand (e.g. Cool Water for men and for women): add the gender.
     keys = {}
     for f in out:

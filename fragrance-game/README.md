@@ -48,3 +48,24 @@ It ranks fragrances by Fragrantica rating votes, drops Gulf houses, and keeps th
 - `404.html`, `robots.txt`: for static hosting such as GitHub Pages.
 
 Once the site has a domain, add a `<link rel="canonical">`, make the `og:image` URL absolute, and add a `sitemap.xml`.
+
+## Launch checklist
+
+Before making the site public:
+
+1. **Fill in the operator details** in `privacy.html`, `terms.html` and `legal.html`: the yellow `[Your full name]`, `[Postal address]` and `[Contact email]` placeholders.
+2. **Get Fragrantica's permission, or replace their content.** The notes, ratings and votes are a copy of Fragrantica's database, and the bottle photos are hotlinked from their image server. In the EU a database like that is protected by the sui generis database right, and product photos by copyright. A free fan game lowers the risk but does not remove it. Write to Fragrantica and ask; if they say no, swap the photos for ones you are licensed to use and rebuild the data from a source you may use.
+3. **Have the legal pages checked** by a lawyer for your country. They are a starting point drafted from how the site actually works, not legal advice.
+4. If you mainly target Hungarian players, add Hungarian versions of the three legal pages.
+5. Once the domain is fixed, add `<link rel="canonical">`, make the `og:image` URL absolute, and add `sitemap.xml`.
+
+## Security
+
+- `_headers` sets a strict Content Security Policy (scripts, styles, fonts only from the site itself; images only from the site and fimgs.net), blocks framing, and turns off browser features the game doesn't use. Cloudflare Pages and Workers static assets both read it.
+- No third-party scripts, no cookies, no forms, no server code.
+- Everything shown from the data is escaped, and saved browser state is validated before use.
+- Known, accepted limit: the answer has to live in the browser, so a player who opens developer tools can find it. That only spoils the game for themselves.
+
+## Data corrections
+
+`data/overrides.json` holds note pyramids that Fragrantica has updated since the Kaggle snapshot, each checked against the live page. `scripts/build_data.py` applies them and also merges spelling variants (vanille/vanilla, oak moss/oakmoss and similar) so shared notes match across bottles.

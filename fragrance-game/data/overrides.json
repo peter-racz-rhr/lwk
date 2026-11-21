@@ -1,0 +1,19 @@
+{
+  "_about": "Note pyramids that Fragrantica has changed since the Kaggle snapshot. Each was checked against the live Fragrantica page on 2026-11-21. Keys are Fragrantica ids.",
+  "33519": { "name": "Baccarat Rouge 540", "source": "https://www.fragrantica.com/perfume/Maison-Francis-Kurkdjian/Baccarat-Rouge-540-33519.html",
+    "top": ["saffron", "jasmine"], "heart": ["amberwood", "ambergris", "hedione"], "base": ["fir resin", "cedar", "sugar", "ambroxan", "oakmoss"] },
+  "39314": { "name": "Layton", "source": "https://www.fragrantica.com/perfume/Parfums-de-Marly/Layton-39314.html",
+    "base": ["vanilla", "cardamom", "sandalwood", "pepper", "guaiac wood", "patchouli", "ambermax™", "coumarin"] },
+  "43871": { "name": "Delina", "source": "https://www.fragrantica.com/perfume/Parfums-de-Marly/Delina-43871.html",
+    "top": ["litchi", "rhubarb", "bergamot", "nutmeg", "black currant"], "base": ["cashmeran", "incense", "cedar", "haitian vetiver", "caramel"] },
+  "62615": { "name": "Angels' Share", "source": "https://www.fragrantica.com/perfume/By-Kilian/Angels-Share-62615.html",
+    "heart": ["cinnamon", "tonka bean", "oak", "hedione"], "base": ["vanilla", "praline", "sandalwood", "candied almond"] },
+  "6472": { "name": "Black Afgano", "source": "https://www.fragrantica.com/perfume/Nasomatto/Black-Afgano-6472.html",
+    "top": ["cannabis", "green notes", "davana", "saffron", "thyme"],
+    "heart": ["resins", "woody notes", "tobacco", "coffee", "cinnamon", "raspberry", "violet"],
+    "base": ["agarwood (oud)", "incense", "amber", "animal notes", "guaiac wood", "musk", "cedar", "tonka bean", "gurjan balsam", "ambroxan", "vanilla"] },
+  "16939": { "name": "Herod", "source": "https://www.fragrantica.com/perfume/Parfums-de-Marly/Herod-16939.html",
+    "base": ["vanilla", "iso e super", "cedar", "musk", "cypriol oil or nagarmotha", "vetiver", "amber"] },
+  "6458": { "name": "Bal d'Afrique", "source": "https://www.fragrantica.com/perfume/Byredo/Bal-d-Afrique-6458.html",
+    "top": ["bergamot", "african marigold", "buchu"], "heart": ["violet", "cyclamen"], "base": ["vetiver", "cedar"] }
+}

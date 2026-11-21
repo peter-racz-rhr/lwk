@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="app">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -20,7 +20,7 @@
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"VideoGame","name":"Blind Buy","description":"Guess the fragrance from its note pyramid. The bottle stays blurred until the round ends.","genre":"Puzzle","gamePlatform":"Web browser","applicationCategory":"Game","operatingSystem":"Any","offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"}}</script>
 <meta name="theme-color" content="#f6f5f2">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='11' y='3' width='10' height='6' rx='1' fill='%23151515'/%3E%3Crect x='6' y='10' width='20' height='19' rx='4' fill='%23151515'/%3E%3C/svg%3E">
-<script>try{var t=localStorage.getItem("blindspritz2:theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}document.documentElement.classList.add("intro")</script>
+<script src="js/theme.js"></script>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -49,6 +49,7 @@
       </div>
       <p class="sheet__blurb" id="sheet-blurb"></p>
       <button type="button" class="btn sheet__giveup mobile-only" id="give-up-sheet">Give up this round</button>
+      <nav class="sheet__links" aria-label="Legal"><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a><a href="legal.html">Legal notice &amp; credits</a></nav>
     </nav>
     <div class="top__meta">
       <button type="button" class="theme mobile-only" id="settings-btn" aria-label="Settings" aria-controls="settings-sheet" aria-expanded="false">
@@ -112,7 +113,8 @@
 
   <div class="backdrop" id="backdrop" hidden></div>
   <footer class="foot">
-    <p>The <span id="count"></span> most-voted fragrances on Fragrantica, taken from a public Fragrantica dataset. Notes, accords, ratings and bottle photos are Fragrantica's. This is a fan project with no link to Fragrantica or any perfume house.</p>
+    <p>The <span id="count"></span> most-voted fragrances on Fragrantica. Notes, accords, ratings and bottle photos come from Fragrantica. Blind Buy is a fan project with no link to Fragrantica or any perfume house; brand and product names belong to their owners.</p>
+    <nav aria-label="Legal"><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a><a href="legal.html">Legal notice &amp; credits</a></nav>
   </footer>
 </div>
 <script src="js/data.js"></script>

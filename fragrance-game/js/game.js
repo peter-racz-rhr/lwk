@@ -43,10 +43,10 @@
   // Colour for a single note, by the accord family it belongs to. First match wins.
   const NOTE_COLOUR = [
     [/rosewood|palisander|pepperwood/, "woody"], [/rosemary/, "aromatic"], [/leaf|leaves|green|galbanum|grass|ivy|bamboo|cucumber|reed|mate|cactus|celery|carrot|flax|bulrush/, "green"],
-    [/tea/, "green"], [/blossom|flower|neroli|jasmin|tuberose|gardenia|ylang|magnolia|lily|frangipani|tiare|champaca|honeysuckle|datura|oleander/, "white floral"],
+    [/tea/, "green"], [/blossom|flower|neroli|jasmin|hedione|tuberose|gardenia|ylang|magnolia|lily|frangipani|tiare|champaca|honeysuckle|datura|oleander/, "white floral"],
     [/rose/, "rose"], [/violet/, "violet"], [/iris|orris|heliotrope|powder/, "iris"], [/mimosa|osmanthus|immortelle|narcissus|marigold|tagetes/, "yellow floral"],
     [/peony|freesia|lotus|orchid|carnation|hyacinth|hiacynth|cyclamen|lilac|hibiscus|wisteria|camelia|floral|petal|amaryllis|bellflower|wallflower|cereus|poppy|mignonette|geranium|pelargonium|silk tree|karo|petalia/, "floral"],
-    [/lavender/, "lavender"], [/sage|basil|mint|thyme|tarragon|artemisia|wormwood|bay|myrtle|chamomile|fennel|angelica|clover|hawthorn/, "aromatic"],
+    [/lavender/, "lavender"], [/sage|basil|mint|thyme|davana|buchu|tarragon|artemisia|wormwood|bay|myrtle|chamomile|fennel|angelica|clover|hawthorn/, "aromatic"],
     [/coconut/, "coconut"], [/almond|hazelnut|chestnut|pistachio|rice/, "nutty"], [/rum|cognac|whiskey|liqueur|martini|malt/, "rum"],
     [/chocolate|cacao|cocoa|coffee|truffle/, "chocolate"], [/honey|beeswax/, "honey"], [/caramel|toffee|praline|sugar|candy|marshmallow|cupcake|popcorn|licorice/, "caramel"],
     [/vanill|tonka|coumarin/, "vanilla"], [/milk|cream|kulfi/, "lactonic"],
@@ -54,7 +54,7 @@
     [/currant|cassis|pear|peach|apple|plum|raspberr|berr|strawberr|cherr|melon|pineapple|litchi|lychee|apricot|quince|kiwi|mango|passion|fig|pomegranate|nectarine|mirabelle|papaya|persimmon|carambola|rhub|fruit|tomato|tamarind/, "fruity"],
     [/sea|water|calone|marine|ozon|aquozone|ice/, "aquatic"], [/salt|seaweed/, "salty"], [/mineral|flint|^sand$/, "mineral"],
     [/pepper|coriander|cardamom|ginger|juniper|elemi/, "fresh spicy"], [/cinnamon|clove|nutmeg|saffron|cumin|caraway|paprika|spice|spicy|anise|cassia|mace|pimento/, "warm spicy"],
-    [/oud|agarwood/, "oud"], [/tobacco/, "tobacco"], [/leather|suede|castoreum/, "leather"], [/civet/, "animalic"], [/incense|smoke|birch|peat/, "smoky"],
+    [/oud|agarwood/, "oud"], [/tobacco/, "tobacco"], [/leather|suede|castoreum/, "leather"], [/civet|animal/, "animalic"], [/incense|smoke|birch|peat/, "smoky"],
     [/patchouli/, "patchouli"], [/moss/, "mossy"], [/vetiver|cypriol/, "earthy"], [/fir|pine|cypress/, "conifer"],
     [/amber|labdanum|benzoin|opoponax|resin|styrax|balsam|myrrh|myrhh|olibanum|tolu|liquidambar|mastic/, "amber"],
     [/musk|ambrette|sylkolide|cotton/, "musky"], [/aldehyde/, "aldehydic"],
@@ -67,11 +67,11 @@
     "orris root": "iris", "orris": "iris", "ambrox": "ambroxan", "jasmine sambac": "jasmine", "white musk": "musk",
     "sea notes": "water notes", "sea water": "water notes", "tobacco leaf": "tobacco", "cocoa": "cacao", "olibanum": "incense",
     "cassis": "black currant", "green apple": "apple", "red apple": "apple", "black pepper": "pepper", "litchi": "lychee",
-    "pelargonium": "geranium", "orange flower": "orange blossom", "african orange flower": "orange blossom", "tonka": "tonka bean",
+    "pelargonium": "geranium", "orange flower": "orange blossom", "african orange flower": "orange blossom",
     "mandarin orange": "mandarin", "calabrian bergamot": "bergamot", "madagascar vanilla": "vanilla", "bourbon vanilla": "vanilla",
-    "virginia cedar": "cedar", "atlas cedar": "cedar", "bulgarian rose": "rose", "turkish rose": "rose", "damask rose": "rose", "may rose": "rose",
+    "virginia cedar": "cedar", "atlas cedar": "cedar", "cedarwood": "cedar", "oak moss": "oakmoss", "agarwood (oud)": "oud", "tonka": "tonka bean", "bulgarian rose": "rose", "turkish rose": "rose", "damask rose": "rose", "may rose": "rose",
   };
-  const canon = (n) => { const k = n.toLowerCase().trim(); return ALIAS[k] || k; };
+  const canon = (n) => { const k = n.toLowerCase().trim().replace(/™/g, ""); return ALIAS[k] || k; };
   const allNotes = (f) => [...f.top, ...f.heart, ...f.base];
   const noteSet = (f) => new Set(allNotes(f).map(canon));
   const byId = (id) => ALL.find((f) => f.id === id);
@@ -89,8 +89,10 @@
 
   // ---------- state ----------
   const prefs = Object.assign({ mode: "medium", play: "daily", gender: "all" }, store.get("prefs", {}));
-  if (!MODES[prefs.mode]) prefs.mode = "medium";
-  if (!GENDERS[prefs.gender]) prefs.gender = "all";
+  const own = (o, k) => typeof k === "string" && Object.prototype.hasOwnProperty.call(o, k);
+  if (!own(MODES, prefs.mode)) prefs.mode = "medium";
+  if (!own(GENDERS, prefs.gender)) prefs.gender = "all";
+  if (prefs.play !== "daily" && prefs.play !== "unlimited") prefs.play = "daily";
   let game = null;
 
   function pool() {
@@ -124,7 +126,12 @@
     if (restore && daily) {
       const saved = store.get(key, null);
       const t = saved && byId(saved.target);
-      if (t) { game = { ...saved, target: t, key }; render(); return; }
+      if (t && validSave(saved, t)) {
+        game = { key, daily, mode: prefs.mode, gender: prefs.gender, target: t, guesses: saved.guesses, hints: saved.hints,
+          over: saved.over === true, won: saved.won === true, gaveUp: saved.gaveUp === true,
+          order: revealOrder(t, hash(t.id + key)), date: todayKey() };
+        render(); return;
+      }
     }
     const target = pickTarget();
     game = { key, daily, mode: prefs.mode, gender: prefs.gender, target, guesses: [], hints: [], over: false, won: false,
@@ -132,6 +139,18 @@
     save();
     render();
   }
+  // Browser storage can be edited by hand, so a saved round is only reused if every field makes sense.
+  function validSave(saved, target) {
+    const m = MODES[prefs.mode];
+    if (!saved || !Array.isArray(saved.guesses) || !Array.isArray(saved.hints)) return false;
+    if (saved.guesses.length > m.guesses || saved.hints.length > m.hints) return false;
+    if (!saved.guesses.every((id) => typeof id === "number" && byId(id))) return false;
+    if (new Set(saved.guesses).size !== saved.guesses.length) return false;
+    if (!saved.hints.every((h) => HINTS.some((x) => x.id === h))) return false;
+    if (saved.won === true && saved.guesses[saved.guesses.length - 1] !== target.id) return false;
+    return true;
+  }
+
   function save() { if (game && game.daily) store.set(game.key, { ...game, target: game.target.id }); }
 
   // ---------- comparison ----------
