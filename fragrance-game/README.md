@@ -2,7 +2,7 @@
 
 A guessing game for fragrance people, in the style of the football-player guessing games. You get a fragrance's note pyramid, drawn as coloured bars grouped into top, heart and base, and a blurred photo of its bottle, and you guess which fragrance it is. Each guess is compared with the answer on ten traits. When the round ends, the bottle comes into focus.
 
-The fragrances are the 250 most-voted on Fragrantica, with houses from the Gulf states left out.
+The fragrances are the 500 most-voted on Fragrantica, with houses from the Gulf states left out.
 
 | Trait | Green | Yellow | Arrow |
 |---|---|---|---|
@@ -19,9 +19,9 @@ The fragrances are the 250 most-voted on Fragrantica, with houses from the Gulf 
 
 ## Modes
 
-- **Easy**: the 100 most-voted. All notes, gender and the top three accords shown. 10 guesses.
-- **Medium**: the top 175. Half the notes start blurred and one unblurs after each miss. 8 guesses.
-- **Hard**: all 250. Two notes to start, one more after each miss. 6 guesses.
+- **Easy**: the 150 most-voted. Lightly blurred bottle; all notes, gender and the top three accords shown. 10 guesses.
+- **Medium**: the top 300. Heavily blurred bottle; half the notes start blurred and one unblurs after each miss. 8 guesses.
+- **Hard**: all 500. No bottle photo until the reveal; two notes to start, one more after each miss. 6 guesses.
 
 Filter by **All / Men / Women / Unisex**. Each mode and filter has its own **Daily** bottle, plus **Unlimited** practice. Hidden notes keep their bar colour, so you can still tell a citrus from a wood. Hints: main accords, decade, country, perfumer, brand initial, gender and extra notes.
 
@@ -39,7 +39,7 @@ Static site, no build step. Open `index.html` or serve the folder (`npx serve .`
 python3 scripts/build_data.py fra_cleaned.csv fra_perfumes.csv
 ```
 
-It ranks fragrances by Fragrantica rating votes, drops Gulf houses, and keeps the top 250 with their notes, accords, rating, vote count, perfumers, year and Fragrantica id. Bottle photos load from Fragrantica's image host (`fimgs.net/mdimg/perfume/375x500.<id>.jpg`). The dataset is a snapshot, so vote counts and the ranking are from when it was scraped, not live.
+It ranks fragrances by Fragrantica rating votes, drops Gulf houses, and keeps the top 500 with their notes, accords, rating, vote count, perfumers, year and Fragrantica id. Bottle photos load from Fragrantica's image host (`fimgs.net/mdimg/perfume/375x500.<id>.jpg`). The dataset is a snapshot, so vote counts and the ranking are from when it was scraped, not live.
 
 ## Site files
 
@@ -53,7 +53,6 @@ Once the site has a domain, add a `<link rel="canonical">`, make the `og:image` 
 
 Before making the site public:
 
-1. **Fill in the operator details** in `privacy.html`, `terms.html` and `legal.html`: the yellow `[Your full name]`, `[Postal address]` and `[Contact email]` placeholders.
 2. **Get Fragrantica's permission, or replace their content.** The notes, ratings and votes are a copy of Fragrantica's database, and the bottle photos are hotlinked from their image server. In the EU a database like that is protected by the sui generis database right, and product photos by copyright. A free fan game lowers the risk but does not remove it. Write to Fragrantica and ask; if they say no, swap the photos for ones you are licensed to use and rebuild the data from a source you may use.
 3. **Have the legal pages checked** by a lawyer for your country. They are a starting point drafted from how the site actually works, not legal advice.
 4. If you mainly target Hungarian players, add Hungarian versions of the three legal pages.

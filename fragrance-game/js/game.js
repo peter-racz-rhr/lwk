@@ -10,13 +10,15 @@
 
   // ---------- modes ----------
   // pixels: how many columns the bottle photo is shrunk to before it is blown back up.
+  // blur: how hidden the bottle photo is. pixels = columns the photo is shrunk to before being
+  // blown back up, px = extra CSS blur. Hard shows no photo at all until the reveal.
   const MODES = {
-    easy: { label: "Easy", guesses: 10, hints: 4, top: 100, pixels: 12, startNotes: Infinity, accordLabels: true, showGender: true,
-      blurb: "The 100 most-voted bottles. All notes, gender and main accords are shown." },
-    medium: { label: "Medium", guesses: 8, hints: 3, top: 175, pixels: 8, startNotes: 0.5, accordLabels: false, showGender: false,
-      blurb: "The top 175. Half the notes start blurred; each miss uncovers one." },
-    hard: { label: "Hard", guesses: 6, hints: 3, top: 250, pixels: 5, startNotes: 2, accordLabels: false, showGender: false,
-      blurb: "All 250. Two notes to start; each miss uncovers one." },
+    easy: { label: "Easy", guesses: 10, hints: 4, top: 150, blur: { pixels: 12, px: 18 }, startNotes: Infinity, accordLabels: true, showGender: true,
+      blurb: "The 150 most-voted bottles. All notes, gender and main accords are shown." },
+    medium: { label: "Medium", guesses: 8, hints: 3, top: 300, blur: { pixels: 3, px: 46 }, startNotes: 0.5, accordLabels: false, showGender: false,
+      blurb: "The top 300. A heavily blurred bottle; half the notes start hidden and each miss uncovers one." },
+    hard: { label: "Hard", guesses: 6, hints: 3, top: 500, blur: null, startNotes: 2, accordLabels: false, showGender: false,
+      blurb: "All 500. No bottle photo, two notes to start, one more after each miss." },
   };
   const GENDERS = { all: "All", Masculine: "Men", Feminine: "Women", Unisex: "Unisex" };
 
@@ -170,7 +172,7 @@
       { label: "Brand", value: guess.brand, state: guess.brand === target.brand ? "hit" : "miss" },
       { label: "Gender", value: GENDERS[guess.gender], state: guess.gender === target.gender ? "hit" : guess.gender === "Unisex" || target.gender === "Unisex" ? "near" : "miss" },
       { label: "Country", value: guess.country, state: guess.country === target.country ? "hit" : "miss" },
-      { label: "Year", value: guess.year ? String(guess.year) : "?", ...num(guess.year || 0, target.year || 0, 4) },
+      { label: "Year", value: guess.year ? String(guess.year) : "?", ...(guess.year && target.year ? num(guess.year, target.year, 4) : { state: same ? "hit" : "miss", dir: 0 }) },
       { label: "Rating", value: guess.rating.toFixed(2), ...num(Math.round(guess.rating * 100), Math.round(target.rating * 100), 10) },
       { label: "Votes", value: fmtVotes(guess.votes), ...votes },
       { label: "Main accord", value: guess.accords[0] || "?", state: guess.accords[0] === target.accords[0] ? "hit" : top5(target).includes(guess.accords[0]) ? "near" : "miss" },
@@ -333,6 +335,8 @@
     const fig = $("#bottle"), canvas = $("#bottle-blur"), frame = $("#bottle-frame");
     const key = t.id + ":" + game.mode;
     fig.classList.toggle("bottle--revealed", game.over);
+    fig.classList.toggle("bottle--nophoto", !m.blur && !game.over);
+    if (m.blur) fig.style.setProperty("--blur", m.blur.px + "px");
     if (game.over) {
       let img = $("#bottle-img");
       if (!img || img.dataset.id !== String(t.id)) {
@@ -350,7 +354,12 @@
       const old = $("#bottle-img"); if (old) old.remove();
       fig.classList.remove("bottle--sharp", "bottle--missing");
     }
-    if (canvas.dataset.key !== key) {
+    if (!m.blur) {
+      canvas.dataset.key = "";
+      drawToken++;
+      fig.classList.remove("bottle--drawn");
+      canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
+    } else if (canvas.dataset.key !== key) {
       canvas.dataset.key = key;
       fig.classList.remove("bottle--drawn");
       const token = ++drawToken;
@@ -358,7 +367,7 @@
       src.referrerPolicy = "no-referrer";
       src.onload = () => {
         if (token !== drawToken) return;
-        const w = m.pixels, h = Math.round(m.pixels * 4 / 3);
+        const w = m.blur.pixels, h = Math.round(m.blur.pixels * 4 / 3);
         const tiny = document.createElement("canvas"); tiny.width = w; tiny.height = h;
         const tctx = tiny.getContext("2d");
         tctx.fillStyle = "#fff"; tctx.fillRect(0, 0, w, h);
@@ -471,13 +480,19 @@
       '<div class="result__actions">' +
       '<button type="button" class="btn btn--solid" id="next-btn">' + (game.daily ? "Play unlimited" : "Next bottle") + "</button>" +
       '<button type="button" class="btn" id="share-btn">Copy result</button>' +
-      '<a class="btn btn--plain" href="https://www.fragrantica.com/search/?query=' + encodeURIComponent(t.brand + " " + t.name) + '" target="_blank" rel="noopener">Fragrantica ↗</a></div>' +
+      '<a class="btn btn--plain" href="' + esc(fragranticaUrl(t)) + '" target="_blank" rel="noopener noreferrer">View on Fragrantica ↗</a></div>' +
       '<p class="result__copied" id="copied" role="status"></p><textarea class="share-text" id="share-text" readonly hidden></textarea>';
     $("#share-btn").addEventListener("click", share);
     $("#next-btn").addEventListener("click", () => {
       if (game.daily) { prefs.play = "unlimited"; store.set("prefs", prefs); }
       newGame(false); window.scrollTo({ top: 0, behavior: "smooth" });
     });
+  }
+
+  // Link straight to the perfume's own Fragrantica page; fall back to a search if the path looks wrong.
+  function fragranticaUrl(t) {
+    if (typeof t.url === "string" && /^[A-Za-z0-9%._-]+\/[A-Za-z0-9%._-]+\.html$/.test(t.url)) return "https://www.fragrantica.com/perfume/" + t.url;
+    return "https://www.fragrantica.com/search/?query=" + encodeURIComponent(t.brand + " " + t.name);
   }
 
   function share() {
@@ -553,7 +568,7 @@
       const words = q.split(/\s+/);
       items = ALL.filter((f) => words.every((w) => norm(f.name + " " + f.brand).includes(w))).sort((a, b) => a.rank - b.rank).slice(0, 8);
       list.hidden = false; input.setAttribute("aria-expanded", "true");
-      if (!items.length) { list.innerHTML = '<li class="opt opt--none">Not in the top 250</li>'; return; }
+      if (!items.length) { list.innerHTML = '<li class="opt opt--none">Not in the top 500</li>'; return; }
       active = 0;
       list.innerHTML = items.map((f, i) => {
         const used = game.guesses.includes(f.id);

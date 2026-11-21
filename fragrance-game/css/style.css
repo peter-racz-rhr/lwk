@@ -152,7 +152,7 @@ button, input, textarea { font: inherit; color: inherit; }
   -webkit-user-drag: none; user-select: none;
 }
 .bottle__frame canvas {
-  filter: blur(22px) saturate(1.25); transform: scale(1.3);
+  filter: blur(var(--blur, 22px)) saturate(1.25); transform: scale(1.3);
   opacity: 0; transition: opacity 400ms ease, filter 700ms ease;
   pointer-events: none;
 }
@@ -167,6 +167,10 @@ button, input, textarea { font: inherit; color: inherit; }
 }
 .bottle--revealed .bottle__frame { width: 300px; }
 .bottle--revealed .bottle__q { opacity: 0; }
+/* Hard mode: no photo, just a card with a question mark. */
+.bottle--nophoto .bottle__frame { background: var(--miss); }
+.bottle--nophoto .bottle__frame canvas { display: none; }
+.bottle--nophoto .bottle__q { color: var(--muted); }
 .bottle--revealed.bottle--missing .bottle__q { opacity: 1; }
 .bottle--pop .bottle__frame { animation: pop 700ms cubic-bezier(.2, .8, .2, 1); }
 @keyframes pop { 0% { transform: scale(0.94); } 60% { transform: scale(1.03); } 100% { transform: none; } }
@@ -355,7 +359,7 @@ figcaption:has(.bottle__name:empty) { display: none; }
   .hints { order: 0; }
 
   .bottle__frame { width: 76px; border-radius: 14px; }
-  .bottle__frame canvas { filter: blur(9px) saturate(1.25); }
+  .bottle__frame canvas { filter: blur(calc(var(--blur, 22px) / 2)) saturate(1.25); }
   .bottle__q { font-size: 36px; }
   .facts:empty, .facts[hidden] { display: block !important; visibility: hidden; }
 
