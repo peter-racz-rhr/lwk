@@ -324,7 +324,7 @@
       seg.addEventListener("click", (e) => { if (suppressClick && e.isTrusted) { e.stopPropagation(); e.preventDefault(); } }, true);
     });
     window.addEventListener("resize", () => { placeThumbs(); if (game) requestAnimationFrame(fitNotes); });
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(placeThumbs);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { placeThumbs(); if (game) fitNotes(); });
   }
 
   // The hidden bottle is drawn into a canvas from a tiny copy of the photo, so the
@@ -433,15 +433,23 @@
       // Phone: the notes area has a fixed height. Grow short pyramids into the spare room,
       // but never so much that they need scrolling.
       if (document.documentElement.classList.contains("kb")) return;
-      const over = () => notes.scrollHeight > notes.clientHeight;
+      // Compare the real bottom of the last bar with the visible area, keeping a small margin.
+      const over = () => {
+        const top = notes.getBoundingClientRect().top;
+        const bottom = Math.max(0, ...[...notes.querySelectorAll(".bar")].map((b) => b.getBoundingClientRect().bottom - top));
+        return bottom > notes.clientHeight - 4 || notes.scrollHeight > notes.clientHeight;
+      };
+      const root = document.documentElement;
+      root.classList.remove("tight-bottle");
       if (over()) {
         notes.classList.add("shrink-1");
         if (over()) { notes.classList.remove("shrink-1"); notes.classList.add("shrink-2"); }
+        if (over()) root.classList.add("tight-bottle"); // last resort: a smaller bottle
         return;
       }
       for (let level = 1; level <= 2; level++) {
         notes.classList.add("grow-" + level);
-        if (notes.scrollHeight > notes.clientHeight) { notes.classList.remove("grow-" + level); break; }
+        if (over()) { notes.classList.remove("grow-" + level); break; }
         notes.classList.remove("grow-" + (level - 1));
       }
       return;
@@ -537,7 +545,6 @@
     renderControls();
     renderBottle(animate);
     renderNotes();
-    fitNotes();
     renderHints();
     renderGuesses(animate);
     renderEnd();
@@ -546,6 +553,7 @@
     $("#hints-btn").disabled = game.over;
     $("#give-up-sheet").disabled = game.over;
     $("#sheet-blurb").textContent = $("#mode-blurb").textContent;
+    fitNotes(); // last, once the guess tiles and result are in place
     $("#round").textContent = game.daily ? "Daily · " + game.date : "Unlimited";
     if (animate && game.over && !phone()) $("#bottle").scrollIntoView({ behavior: "smooth", block: "start" });
   }
