@@ -330,7 +330,7 @@ figcaption:has(.bottle__name:empty) { display: none; }
   .app .foot, .tagline, .blurb, .top__round { display: none; }
 
   .app .page {
-    height: 100dvh; max-width: 760px; overflow: hidden;
+    height: var(--app-h, 100dvh); max-width: 760px; overflow: hidden;
     padding-block: max(10px, env(safe-area-inset-top, 0px)) max(10px, env(safe-area-inset-bottom, 0px));
     display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 10px;
   }
@@ -428,6 +428,56 @@ figcaption:has(.bottle__name:empty) { display: none; }
   .board.is-over #notes, .board.is-over .notes-count, .board.is-over .guess-block, .board.is-over .ask { display: none; }
   .board.is-over .result { display: grid; align-content: start; overflow-y: auto; gap: 10px; }
   .result__facts { gap: 4px 16px; }
+}
+
+/* Tall phones: use the spare height for a bigger bottle and roomier bars. */
+@media (max-width: 759px) and (min-height: 760px) {
+  .app .top h1 { font-size: 40px; }
+  .board { grid-template-columns: clamp(104px, 18dvh, 160px) minmax(0, 1fr); gap: 12px 14px; }
+  .bottle__frame { width: clamp(104px, 18dvh, 160px); border-radius: 20px; }
+  .bottle__q { font-size: 46px; }
+  .facts { font-size: 13px; }
+  #notes { gap: 12px; }
+  .tier h3 { font-size: 22px; }
+  .bars { gap: 4px; }
+  .bar { padding: 6px 8px; font-size: 13px; }
+  .bar--shared { padding-left: 26px; }
+  .bar--shared::before { width: 16px; height: 16px; font-size: 9px; }
+  .guess-block .row-head h2 { font-size: 24px; }
+  .tile { min-height: 52px; padding: 6px 7px; }
+  .tile__k { font-size: 10.5px; }
+  .tile__v { font-size: 13px; }
+}
+
+/* Keyboard open on a phone: drop the guess tiles and shrink the bottle so the notes,
+   the search box and its suggestions all stay in view. */
+@media (max-width: 759px) {
+  .kb .guess-block, .kb .facts, .kb .notes-count { display: none !important; }
+  .kb .board { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; grid-template-areas: "notes" "ask"; }
+  .kb .bottle { display: none; }
+  .kb .app .top h1, .kb.app .top h1 { font-size: 26px; }
+  .kb .theme { width: 32px; height: 32px; }
+  .kb .listbox { max-height: min(34dvh, 232px); }
+  /* Few notes and lots of room: grow the bars instead of leaving a gap (set by fitNotes()). */
+  #notes.grow-1 { gap: 14px; }
+  #notes.grow-1 .tier h3 { font-size: 24px; }
+  #notes.grow-1 .bars { gap: 6px; }
+  #notes.grow-1 .bar { padding: 9px 10px; font-size: 14.5px; }
+  #notes.grow-2 { gap: 18px; }
+  #notes.grow-2 .tier h3 { font-size: 27px; }
+  #notes.grow-2 .bars { gap: 8px; }
+  #notes.grow-2 .bar { padding: 13px 12px; font-size: 16px; }
+  /* Long pyramids: step down instead (set by fitNotes()). */
+  #notes.shrink-1 { gap: 10px; }
+  #notes.shrink-1 .tier h3 { font-size: 18px; }
+  #notes.shrink-1 .bars { gap: 3px; }
+  #notes.shrink-1 .bar { padding: 3px 6px; font-size: 11.5px; line-height: 1.2; }
+  #notes.shrink-2 { gap: 6px; }
+  #notes.shrink-2 .tier h3 { font-size: 15px; }
+  #notes.shrink-2 .bars { gap: 2px; }
+  #notes.shrink-2 .bar { padding: 2px 5px; font-size: 10.5px; line-height: 1.15; }
+  #notes.shrink-1 .bar--shared, #notes.shrink-2 .bar--shared { padding-left: 20px; }
+  #notes.shrink-1 .bar--shared::before, #notes.shrink-2 .bar--shared::before { width: 13px; height: 13px; font-size: 8px; left: 3px; }
 }
 
 /* Short phones (iPhone SE and similar): tighten everything so long note lists still fit. */

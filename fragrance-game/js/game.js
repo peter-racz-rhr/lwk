@@ -323,7 +323,7 @@
       seg.addEventListener("pointercancel", end);
       seg.addEventListener("click", (e) => { if (suppressClick && e.isTrusted) { e.stopPropagation(); e.preventDefault(); } }, true);
     });
-    window.addEventListener("resize", () => { placeThumbs(); if (game) fitNotes(); });
+    window.addEventListener("resize", () => { placeThumbs(); if (game) requestAnimationFrame(fitNotes); });
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(placeThumbs);
   }
 
@@ -428,9 +428,25 @@
   // tighter bar sizes (and finally two bars per row) until it fits.
   function fitNotes() {
     const notes = $("#notes"), col = document.querySelector(".col--mid");
-    notes.classList.remove("fit-1", "fit-2", "fit-3");
-    if (phone()) return;
-    // Measured in page coordinates, so it works the same whether or not the page is scrolled.
+    notes.classList.remove("fit-1", "fit-2", "fit-3", "grow-1", "grow-2", "shrink-1", "shrink-2");
+    if (phone()) {
+      // Phone: the notes area has a fixed height. Grow short pyramids into the spare room,
+      // but never so much that they need scrolling.
+      if (document.documentElement.classList.contains("kb")) return;
+      const over = () => notes.scrollHeight > notes.clientHeight;
+      if (over()) {
+        notes.classList.add("shrink-1");
+        if (over()) { notes.classList.remove("shrink-1"); notes.classList.add("shrink-2"); }
+        return;
+      }
+      for (let level = 1; level <= 2; level++) {
+        notes.classList.add("grow-" + level);
+        if (notes.scrollHeight > notes.clientHeight) { notes.classList.remove("grow-" + level); break; }
+        notes.classList.remove("grow-" + (level - 1));
+      }
+      return;
+    }
+    // Desktop, measured in page coordinates so it works the same whether or not the page is scrolled.
     const fits = () => col.getBoundingClientRect().bottom + window.scrollY <= window.innerHeight - 24;
     for (let level = 1; level <= 3 && !fits(); level++) notes.classList.add("fit-" + level);
   }
@@ -544,6 +560,31 @@
     $("#settings-btn").setAttribute("aria-expanded", String(name === "settings"));
     $("#hints-btn").setAttribute("aria-expanded", String(name === "hints"));
   }
+  // Keep the game exactly as tall as the visible area, so an on-screen keyboard shrinks
+  // the layout instead of pushing the page up (iOS ignores interactive-widget).
+  function trackViewport() {
+    const vv = window.visualViewport;
+    const root = document.documentElement;
+    const input = $("#guess-input");
+    let full = 0; // tallest visible height seen while not typing, i.e. without a keyboard
+    const update = () => {
+      if (!phone()) { root.style.removeProperty("--app-h"); root.classList.remove("kb"); return; }
+      const h = vv ? vv.height : window.innerHeight;
+      const typing = document.activeElement === input;
+      if (!typing || !full) full = Math.max(typing ? 0 : full, h);
+      root.style.setProperty("--app-h", Math.round(h) + "px");
+      const wasKb = root.classList.contains("kb");
+      root.classList.toggle("kb", typing && h < full - 120);
+      if (game && wasKb !== root.classList.contains("kb")) requestAnimationFrame(fitNotes);
+      if (window.scrollY || window.scrollX) window.scrollTo(0, 0);
+    };
+    if (vv) { vv.addEventListener("resize", update); vv.addEventListener("scroll", update); }
+    window.addEventListener("resize", update);
+    input.addEventListener("focus", () => setTimeout(update, 50));
+    input.addEventListener("blur", () => setTimeout(update, 50));
+    update();
+  }
+
   function setupPhone() {
     $("#settings-btn").addEventListener("click", () => openSheet(document.documentElement.classList.contains("sheet-settings") ? null : "settings"));
     $("#hints-btn").addEventListener("click", () => openSheet("hints"));
@@ -620,6 +661,7 @@
     }));
     setupSegments();
     setupPhone();
+    trackViewport();
     bind("mode", "mode"); bind("play", "play"); bind("gender", "gender");
     $("#hint-buttons").addEventListener("click", (e) => { const b = e.target.closest("[data-hint]"); if (b) useHint(b.dataset.hint); });
     $("#give-up").addEventListener("click", giveUp);
